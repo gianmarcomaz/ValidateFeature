@@ -2,26 +2,42 @@
 
 Validate your next feature idea in minutes with instant verdicts, transparent evidence, and actionable validation sprint plans.
 
-## Setup
+## 🚀 Quick Start
 
-⚠️ **IMPORTANT**: If you see `'npm' is not recognized`, you need to install Node.js first. See [SETUP_INSTRUCTIONS.md](./SETUP_INSTRUCTIONS.md) for detailed setup steps.
+### Prerequisites
+- Node.js 18+ installed
+- OpenAI API key
+- Firebase project
 
-### 1. Install Node.js
-
-Download and install Node.js from https://nodejs.org/ (LTS version recommended). After installation, **restart your terminal**.
-
-### 2. Install Dependencies
+### Installation
 
 ```bash
+# Install dependencies
 npm install
+
+# Copy environment template
+cp .env.example .env.local
+
+# Edit .env.local and add your API keys
+# See .env.example for required variables
 ```
 
-### 3. Environment Variables
+### Development
 
-Create a `.env.local` file in the root directory:
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+## 📝 Environment Variables
+
+**⚠️ Important:** Never commit `.env.local` to Git!
+
+Copy `.env.example` to `.env.local` and fill in your values:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=your_openai_api_key
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
@@ -30,48 +46,40 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
-### 4. Firebase Setup
+See `.env.example` for the complete template.
 
-1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
-2. Enable Firestore Database (start in test mode for MVP)
-3. Copy your Firebase config values to `.env.local`
+## 🚢 Deployment
 
-### 5. Run Development Server
+### Deploy to Vercel
 
-```bash
-npm run dev
-```
+1. Push your code to GitHub
+2. Import project in [Vercel](https://vercel.com)
+3. Add environment variables in Vercel dashboard (Settings → Environment Variables)
+4. Deploy!
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+See `VERCEL_DEPLOYMENT.md` for detailed instructions.
 
-## Features
+## 🔒 Security
 
-- **Instant Verdict**: Get BUILD / RISKY / DON'T BUILD recommendations with confidence levels
-- **Transparent Evidence**: See methodology, assumptions, and limitations
-- **Pivot Suggestions**: Get 2-3 refined options with smaller MVP scopes
-- **Validation Sprint Plans**: Generate ready-to-run tests, surveys, and outreach templates
+- ✅ `.env.local` is in `.gitignore` (never committed)
+- ✅ `.env.example` shows required variables (safe to commit)
+- ✅ API keys set via environment variables
+- ✅ No secrets in code or repository
 
-## Project Structure
+## 📚 Documentation
 
-```
-app/
-  page.tsx              # Landing page
-  new/page.tsx          # Intake form
-  s/[id]/page.tsx       # Results page
-  api/llm/              # LLM API routes
-lib/
-  firebase/             # Firebase configuration
-  llm/                  # LLM schemas and prompts
-  domain/               # Domain types and placeholders
-components/
-  ui/                   # Reusable UI components
-  *.tsx                 # Feature-specific components
-```
+- `VERCEL_DEPLOYMENT.md` - Deploy to Vercel guide
+- `SETUP_INSTRUCTIONS.md` - Initial setup guide
+- `ENV_SETUP_GUIDE.md` - Environment variables setup
 
-## Notes
+## 🛠️ Tech Stack
 
-- External APIs (Google Trends, Reddit, competitor search) are placeholders for MVP
-- LLM uses structured outputs with Zod schemas for reliable JSON responses
-- Firestore stores submissions and sprint plans
-- Auth is optional (currently supports anonymous sign-in)
+- **Framework:** Next.js 14 (App Router)
+- **Styling:** Tailwind CSS
+- **Database:** Firebase Firestore
+- **AI:** OpenAI GPT-4
+- **Language:** TypeScript
 
+## 📄 License
+
+See LICENSE file for details.
