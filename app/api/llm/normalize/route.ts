@@ -10,12 +10,28 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate OpenAI key
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY is not set");
+      return NextResponse.json(
+        { error: "OpenAI API key not configured" },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { feature, icp, goalMetric, mode } = body;
 
     if (!feature || !icp || !goalMetric || !mode) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields", details: "feature, icp, goalMetric, and mode are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!feature.title || !feature.description || !icp.role) {
+      return NextResponse.json(
+        { error: "Invalid input", details: "feature.title, feature.description, and icp.role are required" },
         { status: 400 }
       );
     }
@@ -51,16 +67,49 @@ export async function POST(request: NextRequest) {
       throw new Error("No content in OpenAI response");
     }
 
-    const normalized = JSON.parse(content);
+    let normalized;
+    try {
+      normalized = JSON.parse(content);
+    } catch (parseError) {
+      console.error("Failed to parse OpenAI response:", parseError);
+      console.error("Response content:", content);
+      return NextResponse.json(
+        { error: "Invalid response from OpenAI", details: "Failed to parse JSON response" },
+        { status: 500 }
+      );
+    }
     
     // Validate with Zod
-    const validated = NormalizedFeatureSchema.parse(normalized);
-
-    return NextResponse.json(validated);
+    try {
+      const validated = NormalizedFeatureSchema.parse(normalized);
+      return NextResponse.json(validated);
+    } catch (validationError: any) {
+      console.error("Zod validation failed:", validationError);
+      return NextResponse.json(
+        { error: "Validation failed", details: validationError.errors || validationError.message },
+        { status: 500 }
+      );
+    }
   } catch (error: any) {
     console.error("Error in normalize route:", error);
+    
+    // Handle OpenAI API errors
+    if (error?.status === 401) {
+      return NextResponse.json(
+        { error: "OpenAI authentication failed", details: "Check your API key" },
+        { status: 401 }
+      );
+    }
+    
+    if (error?.status === 429) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded", details: "Please try again later" },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
-      { error: error.message || "Failed to normalize feature" },
+      { error: error.message || "Failed to normalize feature", details: "Internal server error" },
       { status: 500 }
     );
   }

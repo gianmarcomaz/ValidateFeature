@@ -28,7 +28,8 @@ export default function NewFeaturePage() {
       });
 
       if (!normalizeRes.ok) {
-        throw new Error("Failed to normalize feature");
+        const errorData = await normalizeRes.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || "Failed to normalize feature");
       }
 
       const normalized = await normalizeRes.json();
@@ -47,7 +48,8 @@ export default function NewFeaturePage() {
       });
 
       if (!verdictRes.ok) {
-        throw new Error("Failed to generate verdict");
+        const errorData = await verdictRes.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || "Failed to generate verdict");
       }
 
       const verdict = await verdictRes.json();

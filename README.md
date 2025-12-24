@@ -34,10 +34,15 @@ Open [http://localhost:3000](http://localhost:3000)
 
 **⚠️ Important:** Never commit `.env.local` to Git!
 
-Copy `.env.example` to `.env.local` and fill in your values:
+### Required Environment Variables
+
+Create `.env.local` file in the root directory with:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key
+# OpenAI API Key (Server-side only)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Firebase Configuration (Client-side)
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
@@ -45,6 +50,19 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
+
+### Getting Your Keys
+
+**OpenAI API Key:**
+1. Go to https://platform.openai.com/api-keys
+2. Create a new secret key
+3. Copy to `OPENAI_API_KEY` in `.env.local`
+
+**Firebase Config:**
+1. Go to https://console.firebase.google.com/
+2. Select your project → Project Settings → General
+3. Scroll to "Your apps" → Web app config
+4. Copy all values starting with `NEXT_PUBLIC_FIREBASE_*`
 
 See `.env.example` for the complete template.
 

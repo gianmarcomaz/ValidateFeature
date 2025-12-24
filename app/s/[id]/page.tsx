@@ -67,7 +67,8 @@ export default function ResultsPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate sprint plan");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || "Failed to generate sprint plan");
       }
 
       const sprintPlan: ValidationSprint = await response.json();

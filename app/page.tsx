@@ -50,6 +50,13 @@ export default function Home() {
           </Link>
         </div>
 
+        {/* Tailwind Test Element - Remove in production */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mb-8 p-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg shadow-lg text-white text-sm text-center">
+            ✅ Tailwind CSS is working! (Gradient, rounded, shadow applied)
+          </div>
+        )}
+
         {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-8 mt-24">
           {/* Card 1 - Instant Verdict */}
