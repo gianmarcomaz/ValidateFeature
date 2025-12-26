@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IntakeForm } from "@/components/IntakeForm";
 import { Spinner } from "@/components/ui/Spinner";
-import { createSubmission, updateSubmission } from "@/lib/firebase/db";
+import { createSubmission, updateSubmission, updateSubmissionNormalized, updateSubmissionVerdict } from "@/lib/firebase/db";
 import { SubmissionInput } from "@/lib/domain/types";
 
 export default function NewFeaturePage() {
@@ -17,8 +17,8 @@ export default function NewFeaturePage() {
     setError(null);
 
     try {
-      // Create submission in Firestore
-      const submissionId = await createSubmission(data);
+      // Create submission in Firestore (status: "draft") - no auth required for MVP
+      const submissionId = await createSubmission(data, null);
 
       // Call normalize API
       const normalizeRes = await fetch("/api/llm/normalize", {
@@ -35,7 +35,7 @@ export default function NewFeaturePage() {
       const normalized = await normalizeRes.json();
 
       // Update submission with normalized data
-      await updateSubmission(submissionId, { normalized });
+      await updateSubmissionNormalized(submissionId, normalized);
 
       // Call verdict API
       const verdictRes = await fetch("/api/llm/verdict", {
@@ -56,16 +56,14 @@ export default function NewFeaturePage() {
 
       // Create placeholder signals
       const signals = {
-        trends: { status: "TODO" },
-        community: { status: "TODO" },
-        competitors: { status: "TODO" },
+        trends: { status: "TODO" as const },
+        community: { status: "TODO" as const },
+        competitors: { status: "TODO" as const },
       };
 
-      // Update submission with verdict and signals
-      await updateSubmission(submissionId, { 
-        verdict,
-        signals,
-      });
+      // Update submission with verdict (sets status to "verdict_ready") and signals
+      await updateSubmissionVerdict(submissionId, verdict);
+      await updateSubmission(submissionId, { signals });
 
       // Redirect to results page
       router.push(`/s/${submissionId}`);
@@ -77,19 +75,19 @@ export default function NewFeaturePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-12">
-      <div className="container mx-auto px-4 max-w-3xl">
+    <main className="py-12">
+      <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
             Validate a New Feature
           </h1>
-          <p className="text-xl text-slate-600">
+          <p className="text-xl text-slate-300">
             Describe your feature idea and target user to get an instant verdict
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200">
             {error}
           </div>
         )}
@@ -98,13 +96,13 @@ export default function NewFeaturePage() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <Spinner size="lg" className="mx-auto mb-4" />
-              <p className="text-gray-600">Processing your feature idea...</p>
+              <p className="text-slate-300">Processing your feature idea...</p>
             </div>
           </div>
         )}
 
         {!isLoading && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 p-8 md:p-10">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 md:p-10 backdrop-blur">
             <IntakeForm onSubmit={handleSubmit} isLoading={isLoading} />
           </div>
         )}

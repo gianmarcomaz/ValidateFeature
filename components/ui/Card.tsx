@@ -10,8 +10,8 @@ export function Card({ children, className = "", hover = false }: CardProps) {
   return (
     <div
       className={`
-        bg-white rounded-2xl border border-gray-100 shadow-lg p-8
-        ${hover ? "hover:shadow-2xl hover:-translate-y-1 transition-all duration-300" : ""}
+        rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur
+        ${hover ? "hover:bg-white/10 transition" : ""}
         ${className}
       `}
     >
@@ -40,7 +40,7 @@ interface CardTitleProps {
 
 export function CardTitle({ children, className = "" }: CardTitleProps) {
   return (
-    <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
+    <h3 className={`text-lg font-semibold text-slate-100 ${className}`}>
       {children}
     </h3>
   );
@@ -53,7 +53,7 @@ interface CardContentProps {
 
 export function CardContent({ children, className = "" }: CardContentProps) {
   return (
-    <div className={`text-gray-700 ${className}`}>
+    <div className={`text-slate-300 ${className}`}>
       {children}
     </div>
   );

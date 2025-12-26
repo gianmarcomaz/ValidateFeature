@@ -19,16 +19,16 @@ export function PivotOptions({ options }: PivotOptionsProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Description:</p>
-                <p className="text-sm">{option.description}</p>
+                <p className="text-sm font-medium text-slate-200 mb-1">Description:</p>
+                <p className="text-sm text-slate-300">{option.description}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Why Stronger:</p>
-                <p className="text-sm">{option.whyStronger}</p>
+                <p className="text-sm font-medium text-slate-200 mb-1">Why Stronger:</p>
+                <p className="text-sm text-slate-300">{option.whyStronger}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Smallest MVP:</p>
-                <p className="text-sm text-blue-600">{option.smallestMVP}</p>
+                <p className="text-sm font-medium text-slate-200 mb-1">Smallest MVP:</p>
+                <p className="text-sm text-cyan-400">{option.smallestMVP}</p>
               </div>
             </CardContent>
           </Card>

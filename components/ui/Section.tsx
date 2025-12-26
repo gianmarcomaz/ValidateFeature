@@ -10,7 +10,7 @@ export function Section({ title, children, className = "" }: SectionProps) {
   return (
     <section className={`mb-8 ${className}`}>
       {title && (
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-slate-100 mb-4">
           {title}
         </h2>
       )}

@@ -21,16 +21,16 @@ export function SprintPlanView({ sprint }: SprintPlanViewProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">Steps:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700">
+                  <p className="text-sm font-medium text-slate-200 mb-2">Steps:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm text-slate-300">
                     {test.steps.map((step, stepIndex) => (
                       <li key={stepIndex}>{step}</li>
                     ))}
                   </ol>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Success Threshold:</p>
-                  <p className="text-sm text-blue-600">{test.successThreshold}</p>
+                  <p className="text-sm font-medium text-slate-200 mb-1">Success Threshold:</p>
+                  <p className="text-sm text-cyan-400">{test.successThreshold}</p>
                 </div>
               </CardContent>
             </Card>
@@ -43,17 +43,17 @@ export function SprintPlanView({ sprint }: SprintPlanViewProps) {
         <Card>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Introduction:</p>
-              <p className="text-sm text-gray-700">{sprint.survey.intro}</p>
+              <p className="text-sm font-medium text-slate-200 mb-2">Introduction:</p>
+              <p className="text-sm text-slate-300">{sprint.survey.intro}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Questions:</p>
-              <ol className="list-decimal list-inside space-y-3 text-sm text-gray-700">
+              <p className="text-sm font-medium text-slate-200 mb-2">Questions:</p>
+              <ol className="list-decimal list-inside space-y-3 text-sm text-slate-300">
                 {sprint.survey.questions.map((question, index) => (
                   <li key={index}>
                     <span className="font-medium">{question.question}</span>
                     {question.options && question.options.length > 0 && (
-                      <ul className="list-disc list-inside ml-4 mt-1 text-gray-600">
+                      <ul className="list-disc list-inside ml-4 mt-1 text-slate-400">
                         {question.options.map((option, optIndex) => (
                           <li key={optIndex}>{option}</li>
                         ))}
@@ -75,13 +75,13 @@ export function SprintPlanView({ sprint }: SprintPlanViewProps) {
               <CardHeader>
                 <CardTitle className="capitalize">{template.platform}</CardTitle>
                 {template.subject && (
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-slate-300 mt-2">
                     <span className="font-medium">Subject:</span> {template.subject}
                   </p>
                 )}
               </CardHeader>
               <CardContent>
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+                <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">
                   {template.body}
                 </pre>
               </CardContent>

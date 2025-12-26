@@ -24,13 +24,13 @@ export function TransparencyPanel({ transparency }: TransparencyPanelProps) {
           <div>
             <button
               onClick={() => toggleSection("assumptions")}
-              className="w-full flex items-center justify-between text-left font-medium text-gray-900 py-2"
+              className="w-full flex items-center justify-between text-left font-medium text-slate-100 py-2"
             >
               <span>Assumptions</span>
-              <span className="text-gray-500">{openSection === "assumptions" ? "−" : "+"}</span>
+              <span className="text-slate-400">{openSection === "assumptions" ? "−" : "+"}</span>
             </button>
             {openSection === "assumptions" && (
-              <ul className="mt-2 space-y-2 pl-4 text-sm text-gray-700">
+              <ul className="mt-2 space-y-2 pl-4 text-sm text-slate-300">
                 {transparency.assumptions.map((assumption, index) => (
                   <li key={index} className="list-disc">{assumption}</li>
                 ))}
@@ -39,16 +39,16 @@ export function TransparencyPanel({ transparency }: TransparencyPanelProps) {
           </div>
 
           {/* Limitations */}
-          <div className="border-t pt-4">
+          <div className="border-t border-white/10 pt-4">
             <button
               onClick={() => toggleSection("limitations")}
-              className="w-full flex items-center justify-between text-left font-medium text-gray-900 py-2"
+              className="w-full flex items-center justify-between text-left font-medium text-slate-100 py-2"
             >
               <span>Limitations</span>
-              <span className="text-gray-500">{openSection === "limitations" ? "−" : "+"}</span>
+              <span className="text-slate-400">{openSection === "limitations" ? "−" : "+"}</span>
             </button>
             {openSection === "limitations" && (
-              <ul className="mt-2 space-y-2 pl-4 text-sm text-gray-700">
+              <ul className="mt-2 space-y-2 pl-4 text-sm text-slate-300">
                 {transparency.limitations.map((limitation, index) => (
                   <li key={index} className="list-disc">{limitation}</li>
                 ))}
@@ -57,16 +57,16 @@ export function TransparencyPanel({ transparency }: TransparencyPanelProps) {
           </div>
 
           {/* Methodology */}
-          <div className="border-t pt-4">
+          <div className="border-t border-white/10 pt-4">
             <button
               onClick={() => toggleSection("methodology")}
-              className="w-full flex items-center justify-between text-left font-medium text-gray-900 py-2"
+              className="w-full flex items-center justify-between text-left font-medium text-slate-100 py-2"
             >
               <span>Methodology</span>
-              <span className="text-gray-500">{openSection === "methodology" ? "−" : "+"}</span>
+              <span className="text-slate-400">{openSection === "methodology" ? "−" : "+"}</span>
             </button>
             {openSection === "methodology" && (
-              <ul className="mt-2 space-y-2 pl-4 text-sm text-gray-700">
+              <ul className="mt-2 space-y-2 pl-4 text-sm text-slate-300">
                 {transparency.methodology.map((method, index) => (
                   <li key={index} className="list-disc">{method}</li>
                 ))}

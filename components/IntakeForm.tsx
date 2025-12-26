@@ -44,11 +44,11 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Mode Selection */}
       <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">
+        <label className="block text-sm font-semibold text-slate-200 mb-2">
           Mode
         </label>
         <div className="flex gap-4">
-          <label className="flex items-center">
+          <label className="flex items-center text-slate-300">
             <input
               type="radio"
               name="mode"
@@ -59,7 +59,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
             />
             Early-stage founder
           </label>
-          <label className="flex items-center">
+          <label className="flex items-center text-slate-300">
             <input
               type="radio"
               name="mode"
@@ -75,7 +75,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
 
       {/* Feature Title */}
       <div>
-        <label htmlFor="feature-title" className="block text-sm font-semibold text-slate-700 mb-2">
+        <label htmlFor="feature-title" className="block text-sm font-semibold text-slate-200 mb-2">
           Feature Title *
         </label>
         <input
@@ -84,14 +84,14 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           required
           value={featureTitle}
           onChange={(e) => setFeatureTitle(e.target.value)}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/80 backdrop-blur-sm transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
           placeholder="e.g., AI-powered code review assistant"
         />
       </div>
 
       {/* Feature Description */}
       <div>
-        <label htmlFor="feature-description" className="block text-sm font-semibold text-slate-700 mb-2">
+        <label htmlFor="feature-description" className="block text-sm font-semibold text-slate-200 mb-2">
           Feature Description *
         </label>
         <textarea
@@ -100,14 +100,14 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           value={featureDescription}
           onChange={(e) => setFeatureDescription(e.target.value)}
           rows={6}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/80 backdrop-blur-sm transition-all duration-200 resize-none"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200 resize-none"
           placeholder="Describe the feature idea, what problem it solves, and how it works..."
         />
       </div>
 
       {/* ICP Role */}
       <div>
-        <label htmlFor="icp-role" className="block text-sm font-semibold text-slate-700 mb-2">
+        <label htmlFor="icp-role" className="block text-sm font-semibold text-slate-200 mb-2">
           Target User Role (ICP) *
         </label>
         <input
@@ -116,14 +116,14 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           required
           value={icpRole}
           onChange={(e) => setIcpRole(e.target.value)}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/80 backdrop-blur-sm transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
           placeholder="e.g., Software Engineer, Product Manager, CEO"
         />
       </div>
 
       {/* ICP Industry (Optional) */}
       <div>
-        <label htmlFor="icp-industry" className="block text-sm font-semibold text-slate-700 mb-2">
+        <label htmlFor="icp-industry" className="block text-sm font-semibold text-slate-200 mb-2">
           Industry (Optional)
         </label>
         <input
@@ -131,14 +131,14 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           type="text"
           value={icpIndustry}
           onChange={(e) => setIcpIndustry(e.target.value)}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/80 backdrop-blur-sm transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
           placeholder="e.g., SaaS, FinTech, Healthcare"
         />
       </div>
 
       {/* ICP Company Size (Optional) */}
       <div>
-        <label htmlFor="icp-company-size" className="block text-sm font-semibold text-slate-700 mb-2">
+        <label htmlFor="icp-company-size" className="block text-sm font-semibold text-slate-200 mb-2">
           Company Size (Optional)
         </label>
         <input
@@ -146,14 +146,14 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           type="text"
           value={icpCompanySize}
           onChange={(e) => setIcpCompanySize(e.target.value)}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/80 backdrop-blur-sm transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
           placeholder="e.g., 1-10, 11-50, 51-200, 201+"
         />
       </div>
 
       {/* Goal Metric */}
       <div>
-        <label htmlFor="goal-metric" className="block text-sm font-semibold text-slate-700 mb-2">
+        <label htmlFor="goal-metric" className="block text-sm font-semibold text-slate-200 mb-2">
           Goal Metric *
         </label>
         <select
@@ -161,12 +161,12 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           required
           value={goalMetric}
           onChange={(e) => setGoalMetric(e.target.value as GoalMetric)}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/80 backdrop-blur-sm transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
         >
-          <option value="activation">Activation</option>
-          <option value="retention">Retention</option>
-          <option value="revenue">Revenue</option>
-          <option value="support">Support Reduction</option>
+          <option value="activation" className="bg-slate-900">Activation</option>
+          <option value="retention" className="bg-slate-900">Retention</option>
+          <option value="revenue" className="bg-slate-900">Revenue</option>
+          <option value="support" className="bg-slate-900">Support Reduction</option>
         </select>
       </div>
 
@@ -174,7 +174,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02]"
+        className="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? "Processing..." : "Get Instant Verdict"}
       </button>

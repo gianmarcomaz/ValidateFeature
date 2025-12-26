@@ -10,7 +10,6 @@ import { PivotOptions } from "@/components/PivotOptions";
 import { TransparencyPanel } from "@/components/TransparencyPanel";
 import { SprintPlanView } from "@/components/SprintPlanView";
 import { Spinner } from "@/components/ui/Spinner";
-import { Card } from "@/components/ui/Card";
 import { VerdictResponse, ValidationSprint } from "@/lib/domain/types";
 
 export default function ResultsPage() {
@@ -62,7 +61,10 @@ export default function ResultsPage() {
         body: JSON.stringify({
           verdict: submission.verdict,
           normalized: submission.normalized,
-          feature: submission.feature,
+          feature: {
+            title: submission.featureTitle,
+            description: submission.featureDescription,
+          },
         }),
       });
 
@@ -87,9 +89,9 @@ export default function ResultsPage() {
   };
 
   const handleCopySummary = () => {
-    if (!submission?.verdict || !submission?.feature) return;
+    if (!submission?.verdict || !submission?.featureTitle) return;
 
-    const summary = `Feature Validation: ${submission.feature.title}
+    const summary = `Feature Validation: ${submission.featureTitle}
 
 Verdict: ${submission.verdict.verdict} (${submission.verdict.confidence} confidence)
 
@@ -106,10 +108,10 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Spinner size="lg" className="mx-auto mb-4" />
-          <p className="text-gray-600">Loading results...</p>
+          <p className="text-slate-300">Loading results...</p>
         </div>
       </main>
     );
@@ -117,33 +119,33 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
 
   if (error || !submission) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card>
+      <main className="flex items-center justify-center min-h-screen">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur">
           <div className="text-center">
-            <p className="text-red-600 mb-4">{error || "Submission not found"}</p>
+            <p className="text-red-300 mb-4">{error || "Submission not found"}</p>
             <Link
               href="/"
-              className="text-blue-600 hover:underline"
+              className="text-cyan-400 hover:underline"
             >
               Go back home
             </Link>
           </div>
-        </Card>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-12">
-      <div className="container mx-auto px-4 max-w-5xl">
+    <main className="py-12">
+      <div className="mx-auto max-w-6xl px-6 py-16">
         {/* Header */}
         <div className="mb-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-purple-600 font-medium mb-6 transition-colors group"
+            className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium mb-6 transition-colors"
           >
             <svg
-              className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -157,14 +159,14 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
             </svg>
             Back to home
           </Link>
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
-            {submission.feature.title}
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+            {submission.featureTitle}
           </h1>
-          <p className="text-xl text-slate-600 leading-relaxed">{submission.feature.description}</p>
+          <p className="text-xl text-slate-300 leading-relaxed">{submission.featureDescription}</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200">
             {error}
           </div>
         )}
@@ -186,7 +188,7 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
             <div className="flex flex-wrap gap-4 mt-8 mb-8">
               <button
                 onClick={handleCopySummary}
-                className="px-6 py-3 bg-white/80 backdrop-blur-sm text-slate-700 rounded-xl font-semibold hover:bg-white hover:shadow-lg border border-slate-200 transition-all duration-300"
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 hover:bg-white/10 transition"
               >
                 Copy Summary
               </button>
@@ -194,7 +196,7 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
                 <button
                   onClick={handleGenerateSprint}
                   disabled={isGeneratingSprint}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 disabled:hover:scale-100"
+                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isGeneratingSprint ? (
                     <span className="flex items-center gap-2">
