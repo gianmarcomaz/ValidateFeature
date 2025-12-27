@@ -31,11 +31,20 @@ export const TransparencyInfoSchema = z.object({
   methodology: z.array(z.string()),
 });
 
+export const CompetitorAnalysisSchema = z.object({
+  name: z.string(),
+  category: z.string(),
+  whatTheyDo: z.string(),
+  whyOverlaps: z.string(),
+  link: z.string(),
+});
+
 export const VerdictResponseSchema = z.object({
   verdict: z.enum(["BUILD", "RISKY", "DONT_BUILD"]),
   confidence: z.enum(["HIGH", "MEDIUM", "LOW"]),
   reasons: z.array(VerdictReasonSchema).min(3).max(6),
   pivotOptions: z.array(PivotOptionSchema).min(2).max(3),
+  competitorAnalysis: z.array(CompetitorAnalysisSchema).min(0).max(5),
   transparency: TransparencyInfoSchema,
 });
 
@@ -72,7 +81,16 @@ export const ValidationSprintSchema = z.object({
 export type ValidationSprint = z.infer<typeof ValidationSprintSchema>;
 
 // Helper to convert Zod schema to JSON Schema for OpenAI
+// OpenAI requires ALL properties to be in the 'required' array
 export function zodToJsonSchema(schema: z.ZodType): any {
-  return zodToJson(schema);
+  const jsonSchema = zodToJson(schema);
+  
+  // OpenAI strict requirement: ALL properties must be in 'required' array
+  if (jsonSchema.properties) {
+    const allPropertyKeys = Object.keys(jsonSchema.properties);
+    jsonSchema.required = allPropertyKeys;
+  }
+  
+  return jsonSchema;
 }
 

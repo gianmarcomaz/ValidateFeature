@@ -94,9 +94,24 @@ export async function POST(request: NextRequest) {
     console.error("Error in normalize route:", error);
     
     // Handle OpenAI API errors
-    if (error?.status === 401) {
+    if (error?.status === 401 || error?.message?.includes("401") || error?.message?.includes("authentication")) {
+      const keyPresent = !!process.env.OPENAI_API_KEY;
+      const keyLength = process.env.OPENAI_API_KEY?.length || 0;
+      const keyPrefix = process.env.OPENAI_API_KEY?.substring(0, 3) || "N/A";
+      
+      console.error("OpenAI Auth Error Details:", {
+        keyPresent,
+        keyLength,
+        keyPrefix,
+        errorMessage: error?.message,
+        errorStatus: error?.status,
+      });
+      
       return NextResponse.json(
-        { error: "OpenAI authentication failed", details: "Check your API key" },
+        { 
+          error: "OpenAI authentication failed", 
+          details: `Check your API key. Key present: ${keyPresent}, Length: ${keyLength}, Prefix: ${keyPrefix}. Original error: ${error?.message || "Unknown error"}. Make sure your .env.local file is in the project root and you've restarted the dev server after adding the key.` 
+        },
         { status: 401 }
       );
     }

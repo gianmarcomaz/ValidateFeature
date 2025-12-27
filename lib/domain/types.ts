@@ -51,11 +51,20 @@ export interface TransparencyInfo {
   methodology: string[];
 }
 
+export interface CompetitorAnalysis {
+  name: string;
+  category: string;
+  whatTheyDo: string;
+  whyOverlaps: string;
+  link: string;
+}
+
 export interface VerdictResponse {
   verdict: Verdict;
   confidence: Confidence;
   reasons: VerdictReason[];
   pivotOptions: PivotOption[];
+  competitorAnalysis?: CompetitorAnalysis[];
   transparency: TransparencyInfo;
 }
 

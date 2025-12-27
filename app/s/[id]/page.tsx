@@ -3,19 +3,24 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { getSubmission, createSprint, getSprint } from "@/lib/firebase/db";
 import { SubmissionDocument, SprintDocument } from "@/lib/firebase/db";
 import { VerdictView } from "@/components/VerdictView";
 import { PivotOptions } from "@/components/PivotOptions";
 import { TransparencyPanel } from "@/components/TransparencyPanel";
+import { CompetitorsView } from "@/components/CompetitorsView";
+import { EvidenceMetrics } from "@/components/EvidenceMetrics";
 import { SprintPlanView } from "@/components/SprintPlanView";
 import { Spinner } from "@/components/ui/Spinner";
+import { useMotionConfig, staggerContainer } from "@/lib/motion";
 import { VerdictResponse, ValidationSprint } from "@/lib/domain/types";
 
 export default function ResultsPage() {
   const params = useParams();
   const router = useRouter();
   const submissionId = params.id as string;
+  const { reduceMotion, fadeUp, staggerContainer: stagger } = useMotionConfig();
 
   const [submission, setSubmission] = useState<SubmissionDocument | null>(null);
   const [sprint, setSprint] = useState<ValidationSprint | null>(null);
@@ -36,6 +41,25 @@ export default function ResultsPage() {
         setIsLoading(false);
         return;
       }
+      
+      // Log evidence for debugging
+      if (data.evidence) {
+        console.log("[Results] Evidence loaded:", {
+          hasEvidence: !!data.evidence,
+          competitors: data.evidence.competitors?.length || 0,
+          competitorSummary: data.evidence.competitorSummary,
+          googleCount: data.evidence.google?.queries?.reduce((sum: number, q: any) => sum + (q.items?.length || 0), 0) || 0,
+          hnCount: data.evidence.hackernews?.hits?.length || 0,
+          signals: data.evidence.signals ? {
+            competitor_density: data.evidence.signals.competitor_density,
+            evidenceCoverage: data.evidence.signals.evidenceCoverage,
+            marketEstablished: data.evidence.signals.marketEstablished,
+          } : null,
+        });
+      } else {
+        console.warn("[Results] No evidence found in submission - evidence may not have been stored");
+      }
+      
       setSubmission(data);
       setIsLoading(false);
     } catch (err: any) {
@@ -139,84 +163,151 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
     <main className="py-12">
       <div className="mx-auto max-w-6xl px-6 py-16">
         {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium mb-6 transition-colors"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <motion.div
+          className="mb-8"
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div variants={fadeUp}>
+            <Link
+              href="/"
+              className="group inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium mb-6 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to home
-          </Link>
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+              <svg
+                className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform duration-200"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back to home
+            </Link>
+          </motion.div>
+          <motion.h1
+            className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"
+            variants={fadeUp}
+          >
             {submission.featureTitle}
-          </h1>
-          <p className="text-xl text-slate-300 leading-relaxed">{submission.featureDescription}</p>
-        </div>
+          </motion.h1>
+          <motion.p
+            className="text-xl text-slate-300 leading-relaxed"
+            variants={fadeUp}
+          >
+            {submission.featureDescription}
+          </motion.p>
+        </motion.div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200">
-            {error}
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Verdict */}
         {submission.verdict && (
-          <>
-            <VerdictView verdict={submission.verdict} />
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+          >
+            <motion.div variants={fadeUp}>
+              <VerdictView verdict={submission.verdict} />
+            </motion.div>
+
+            {/* Evidence Metrics */}
+            {submission.evidence && (
+              <motion.div variants={fadeUp}>
+                <EvidenceMetrics evidence={submission.evidence} />
+              </motion.div>
+            )}
+
+            {/* Competitor Analysis */}
+            {submission.verdict.competitorAnalysis && submission.verdict.competitorAnalysis.length > 0 && (
+              <motion.div variants={fadeUp}>
+                <CompetitorsView
+                  competitorAnalysis={submission.verdict.competitorAnalysis}
+                  evidenceCoverage={submission.evidence?.signals?.evidenceCoverage}
+                />
+              </motion.div>
+            )}
 
             {/* Pivot Options */}
             {submission.verdict.pivotOptions.length > 0 && (
-              <PivotOptions options={submission.verdict.pivotOptions} />
+              <motion.div variants={fadeUp}>
+                <PivotOptions options={submission.verdict.pivotOptions} />
+              </motion.div>
             )}
 
             {/* Transparency Panel */}
-            <TransparencyPanel transparency={submission.verdict.transparency} />
+            <motion.div variants={fadeUp}>
+              <TransparencyPanel transparency={submission.verdict.transparency} />
+            </motion.div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 mt-8 mb-8">
-              <button
+            <motion.div
+              className="flex flex-wrap gap-4 mt-8 mb-8"
+              variants={fadeUp}
+            >
+              <motion.button
                 onClick={handleCopySummary}
-                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 hover:bg-white/10 transition"
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200 hover:bg-white/10 transition-colors duration-200 active:scale-[0.98]"
+                whileTap={reduceMotion ? {} : { scale: 0.98 }}
               >
                 Copy Summary
-              </button>
+              </motion.button>
               {!showSprint && (
-                <button
+                <motion.button
                   onClick={handleGenerateSprint}
                   disabled={isGeneratingSprint}
-                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:shadow-xl hover:shadow-fuchsia-500/25 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden focus-visible:ring-2 focus-visible:ring-fuchsia-400/60 focus-visible:ring-offset-0"
+                  whileTap={reduceMotion || isGeneratingSprint ? {} : { scale: 0.98 }}
                 >
-                  {isGeneratingSprint ? (
-                    <span className="flex items-center gap-2">
-                      <Spinner size="sm" className="inline-block" />
-                      Generating...
-                    </span>
-                  ) : (
-                    "Generate Validation Sprint"
-                  )}
-                </button>
+                  <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  <span className="relative flex items-center gap-2">
+                    {isGeneratingSprint ? (
+                      <>
+                        <Spinner size="sm" className="inline-block" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate Validation Sprint"
+                    )}
+                  </span>
+                </motion.button>
               )}
-            </div>
+            </motion.div>
 
             {/* Sprint Plan */}
-            {showSprint && sprint && (
-              <div className="mt-8">
-                <SprintPlanView sprint={sprint} />
-              </div>
-            )}
-          </>
+            <AnimatePresence>
+              {showSprint && sprint && (
+                <motion.div
+                  className="mt-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <SprintPlanView sprint={sprint} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </main>

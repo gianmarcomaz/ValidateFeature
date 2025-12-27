@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Mode, GoalMetric } from "@/lib/domain/types";
+import { useMotionConfig } from "@/lib/motion";
 
 interface IntakeFormProps {
   onSubmit: (data: {
@@ -14,6 +16,7 @@ interface IntakeFormProps {
 }
 
 export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
+  const { reduceMotion, fadeUp } = useMotionConfig();
   const [mode, setMode] = useState<Mode>("early");
   const [featureTitle, setFeatureTitle] = useState("");
   const [featureDescription, setFeatureDescription] = useState("");
@@ -41,7 +44,13 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <motion.form
+      onSubmit={handleSubmit}
+      className="space-y-6"
+      variants={fadeUp}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Mode Selection */}
       <div>
         <label className="block text-sm font-semibold text-slate-200 mb-2">
@@ -84,7 +93,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           required
           value={featureTitle}
           onChange={(e) => setFeatureTitle(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
           placeholder="e.g., AI-powered code review assistant"
         />
       </div>
@@ -100,7 +109,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           value={featureDescription}
           onChange={(e) => setFeatureDescription(e.target.value)}
           rows={6}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200 resize-none"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200 resize-none"
           placeholder="Describe the feature idea, what problem it solves, and how it works..."
         />
       </div>
@@ -116,7 +125,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           required
           value={icpRole}
           onChange={(e) => setIcpRole(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
           placeholder="e.g., Software Engineer, Product Manager, CEO"
         />
       </div>
@@ -131,7 +140,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           type="text"
           value={icpIndustry}
           onChange={(e) => setIcpIndustry(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
           placeholder="e.g., SaaS, FinTech, Healthcare"
         />
       </div>
@@ -146,7 +155,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           type="text"
           value={icpCompanySize}
           onChange={(e) => setIcpCompanySize(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
           placeholder="e.g., 1-10, 11-50, 51-200, 201+"
         />
       </div>
@@ -161,7 +170,7 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
           required
           value={goalMetric}
           onChange={(e) => setGoalMetric(e.target.value as GoalMetric)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all duration-200"
+          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
         >
           <option value="activation" className="bg-slate-900">Activation</option>
           <option value="retention" className="bg-slate-900">Retention</option>
@@ -171,14 +180,32 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
       </div>
 
       {/* Submit Button */}
-      <button
+      <motion.button
         type="submit"
         disabled={isLoading}
-        className="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="group relative w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:shadow-xl hover:shadow-fuchsia-500/25 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden focus-visible:ring-2 focus-visible:ring-fuchsia-400/60 focus-visible:ring-offset-0"
+        whileTap={reduceMotion ? {} : { scale: 0.98 }}
+        transition={{ duration: 0.1 }}
       >
-        {isLoading ? "Processing..." : "Get Instant Verdict"}
-      </button>
-    </form>
+        <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+        <span className="relative flex items-center gap-2">
+          {isLoading && (
+            <motion.svg
+              className="w-4 h-4 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+              initial={{ opacity: 0, rotate: 0 }}
+              animate={{ opacity: 1, rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </motion.svg>
+          )}
+          {isLoading ? "Processing..." : "Get Instant Verdict"}
+        </span>
+      </motion.button>
+    </motion.form>
   );
 }
 

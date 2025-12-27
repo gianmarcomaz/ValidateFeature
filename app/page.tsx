@@ -1,38 +1,73 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { useMotionConfig, staggerContainer } from "@/lib/motion";
+import GlobeHero from "@/components/GlobeHero";
 
 export default function Home() {
+  const { reduceMotion, transition, fadeUp, staggerContainer: stagger } = useMotionConfig();
+
   return (
     <main className="relative overflow-hidden">
-      <div className="mx-auto max-w-6xl px-6 py-16">
+      <GlobeHero />
+      <div className="mx-auto max-w-6xl px-6 py-16 relative z-0">
         {/* Hero Section */}
-        <div className="text-center mb-20">
-          <div className="inline-block mb-6">
+        <motion.div
+          className="text-center mb-20"
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div
+            className="inline-block mb-6"
+            variants={fadeUp}
+          >
             <span className="px-4 py-2 bg-white/10 text-slate-200 rounded-full text-sm font-semibold border border-white/20">
               AI-Powered Feature Validation
             </span>
-          </div>
+          </motion.div>
           
-          <h1 className="text-6xl md:text-7xl font-extrabold mb-6 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent leading-tight">
+          <motion.h1
+            className="text-6xl md:text-7xl font-extrabold mb-6 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent leading-tight"
+            variants={fadeUp}
+          >
             Validate your next feature in minutes
-          </h1>
+          </motion.h1>
           
-          <p className="text-xl md:text-2xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+          <motion.p
+            className="text-xl md:text-2xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed"
+            variants={fadeUp}
+          >
             Get instant verdicts on feature ideas with transparent evidence, 
             pivot suggestions, and actionable validation sprint plans.
-          </p>
+          </motion.p>
           
-          <Link
-            href="/new"
-            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:opacity-95"
-          >
-            <span>Validate a Feature</span>
-          </Link>
-        </div>
+          <motion.div variants={fadeUp}>
+            <Link
+              href="/new"
+              className="group relative inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:shadow-xl hover:shadow-fuchsia-500/25 transition-all duration-200 ease-out active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-fuchsia-400/60 focus-visible:ring-offset-0 overflow-hidden"
+            >
+              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              <span className="relative">Validate a Feature</span>
+            </Link>
+          </motion.div>
+        </motion.div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mt-24">
+        <motion.div
+          className="grid md:grid-cols-3 gap-8 mt-24"
+          variants={stagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
           {/* Card 1 - Instant Verdict */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 transition">
+          <motion.div
+            className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-200 ease-out"
+            variants={fadeUp}
+            whileHover={reduceMotion ? {} : { y: -2 }}
+          >
             <div className="h-10 w-10 mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
               <svg
                 className="h-5 w-5 text-white"
@@ -55,10 +90,14 @@ export default function Home() {
               Get a clear BUILD, RISKY, or DON'T BUILD recommendation 
               with confidence levels and detailed reasoning.
             </p>
-          </div>
+          </motion.div>
 
           {/* Card 2 - Transparent Evidence */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 transition">
+          <motion.div
+            className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-200 ease-out"
+            variants={fadeUp}
+            whileHover={reduceMotion ? {} : { y: -2 }}
+          >
             <div className="h-10 w-10 mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
               <svg
                 className="h-5 w-5 text-white"
@@ -87,10 +126,14 @@ export default function Home() {
               See exactly how decisions are made with detailed methodology, 
               assumptions, and limitations clearly disclosed.
             </p>
-          </div>
+          </motion.div>
 
           {/* Card 3 - Validation Sprint Plan */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 transition">
+          <motion.div
+            className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-200 ease-out"
+            variants={fadeUp}
+            whileHover={reduceMotion ? {} : { y: -2 }}
+          >
             <div className="h-10 w-10 mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-pink-600">
               <svg
                 className="h-5 w-5 text-white"
@@ -113,8 +156,8 @@ export default function Home() {
               Get ready-to-run validation tests, survey questions, 
               and outreach templates to increase confidence.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </main>
   );

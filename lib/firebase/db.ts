@@ -7,7 +7,8 @@ import {
   getDocs,
   updateDoc,
   serverTimestamp,
-  Timestamp 
+  Timestamp,
+  FieldValue
 } from "firebase/firestore";
 import { db } from "./client";
 import { SubmissionInput, NormalizedFeature, VerdictResponse, ValidationSprint } from "@/lib/domain/types";
@@ -37,6 +38,7 @@ export interface SubmissionDocument {
     community: { status: "TODO" | "complete" };
     competitors: { status: "TODO" | "complete" };
   };
+  evidence?: any; // NormalizedEvidence from lib/evidence/types
   verdict?: VerdictResponse & { generatedAt?: Timestamp };
   status: "draft" | "verdict_ready" | "sprint_ready";
 }
@@ -125,10 +127,20 @@ export async function updateSubmissionVerdict(
   await updateSubmission(submissionId, {
     verdict: {
       ...verdict,
-      generatedAt: serverTimestamp(),
+      generatedAt: serverTimestamp() as any, // FieldValue - Firestore converts to Timestamp on read
     },
     status: "verdict_ready",
   });
+}
+
+/**
+ * Updates submission with evidence data
+ */
+export async function updateSubmissionEvidence(
+  submissionId: string,
+  evidence: any
+): Promise<void> {
+  await updateSubmission(submissionId, { evidence });
 }
 
 /**

@@ -130,6 +130,13 @@ Validate/
 │   ├── llm/
 │   │   ├── schemas.ts            # Zod schemas for LLM responses
 │   │   └── prompts.ts            # Prompt templates
+│   ├── evidence/                 # Evidence gathering module
+│   │   ├── types.ts              # Evidence types
+│   │   ├── googleCse.ts          # Google CSE integration
+│   │   ├── hackerNews.ts         # Hacker News API integration
+│   │   ├── normalize.ts          # Normalize evidence from sources
+│   │   ├── signals.ts            # Compute evidence signals
+│   │   └── keywords.ts           # Keyword derivation
 │   └── domain/
 │       ├── types.ts              # TypeScript types
 │       ├── signals.ts            # External API placeholders
@@ -161,7 +168,15 @@ NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+
+# Google Custom Search Engine (Optional - for evidence gathering)
+GOOGLE_CSE_API_KEY=...
+GOOGLE_CSE_CX=...
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+
+# Google Custom Search Engine (Optional - for evidence gathering)
+GOOGLE_CSE_API_KEY=...
+GOOGLE_CSE_CX=...
 ```
 
 **⚠️ Important:** Never commit `.env.local` to Git! It's already in `.gitignore`.
@@ -184,6 +199,24 @@ NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
 4. Scroll to "Your apps" → Web app (`</>` icon)
 5. Register app if not already done
 6. Copy the config object values to `.env.local`
+
+#### Google Custom Search Engine (Optional)
+
+**Note:** Evidence gathering works without Google CSE, but verdicts will note that external evidence was not available.
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the "Custom Search API" in "APIs & Services" > "Library"
+4. Create an API Key in "APIs & Services" > "Credentials"
+   - Restrict the key to "Custom Search API" for security
+5. Go to [Programmable Search Engine](https://programmablesearchengine.google.com/)
+6. Click "Add" to create a new search engine
+   - Set "Sites to search" to "Search the entire web"
+   - Give it a name
+7. Copy the Search Engine ID (CX) from the control panel
+8. Add both `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_CX` to `.env.local`
+
+**Free Tier:** 100 search queries per day
 
 ---
 
@@ -451,7 +484,43 @@ All API routes are server-side only (never exposed to client).
 }
 ```
 
+**Input:**
+```json
+{
+  ...submissionInput,
+  "normalized": NormalizedFeature,
+  "evidence?": NormalizedEvidence  // Optional - if missing, verdict still works with lower confidence
+}
+```
+
 **Output:** `VerdictResponse` (validated JSON)
+
+**Note:** If `evidence` is provided, the verdict will reference external findings (competitors, pain signals, recency). If missing, confidence is typically lowered and methodology notes the absence of external evidence.
+
+### `POST /api/evidence/search`
+
+**Input:**
+```json
+{
+  "query": string,
+  "keywords?": string[]
+}
+```
+
+**Output:**
+```json
+{
+  "evidence": NormalizedEvidence
+}
+```
+
+**What it does:**
+- Searches Google CSE with multiple queries (software, tool, alternative, pricing, problem)
+- Searches Hacker News via Algolia API
+- Normalizes results and computes signals (competitor_density, recency_score, pain_signal, overall_evidence_score)
+- Returns top citations and evidence summary
+
+**Note:** Requires `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_CX` in environment. Hacker News is free (no key required). If Google CSE fails, returns partial results from Hacker News only.
 
 ### `POST /api/llm/sprint`
 
