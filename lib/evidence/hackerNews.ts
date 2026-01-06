@@ -30,14 +30,26 @@ export async function searchHackerNews(keywords: string[]): Promise<HackerNewsHi
   url.searchParams.set("hitsPerPage", "10");
 
   try {
-    const response = await fetch(url.toString());
+    console.log(`[HN] Fetching: ${url.toString()}`);
+    // Create timeout controller
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url.toString(), {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error(`Hacker News API error: ${response.status}`);
+      console.error(`[HN] API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text().catch(() => "");
+      console.error(`[HN] Error response: ${errorText.substring(0, 200)}`);
       return [];
     }
 
     const data: AlgoliaResponse = await response.json();
+    console.log(`[HN] Received ${data.nbHits} total hits, returning ${data.hits?.length || 0} hits`);
 
     const hits: HackerNewsHit[] = (data.hits || []).map((hit) => ({
       title: hit.title,
@@ -50,7 +62,11 @@ export async function searchHackerNews(keywords: string[]): Promise<HackerNewsHi
 
     return hits;
   } catch (error: any) {
-    console.error(`Error fetching Hacker News for "${keywordString}":`, error);
+    if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      console.error(`[HN] Request timeout for "${keywordString}"`);
+    } else {
+      console.error(`[HN] Error fetching Hacker News for "${keywordString}":`, error?.message || error);
+    }
     return [];
   }
 }

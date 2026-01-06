@@ -92,14 +92,75 @@ export default function NewFeaturePage() {
           });
           
           // Store evidence in Firestore
-          await updateSubmission(submissionId, { evidence });
+          try {
+            await updateSubmission(submissionId, { evidence });
+            console.log("[Form] Evidence stored successfully");
+          } catch (firestoreErr: any) {
+            console.error("[Form] Failed to store evidence in Firestore:", firestoreErr?.message || firestoreErr);
+            // Continue - evidence will be missing but submission continues
+          }
         } else {
           const errorData = await evidenceRes.json().catch(() => ({}));
           console.warn("Evidence fetch failed:", errorData);
+          // Store evidence object with warnings instead of null
+          evidence = {
+            google: { configured: false, queries: [] },
+            hackernews: { hits: [] },
+            competitors: [],
+            competitorSummary: { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" },
+            signals: {
+              competitor_density: 0,
+              recency_score: 50,
+              pain_signal: 0,
+              overall_evidence_score: 0,
+              evidenceCoverage: 0,
+              marketEstablished: false,
+              notes: ["Evidence fetch failed"],
+            },
+            citations: [],
+            warnings: [{
+              type: "api_error",
+              message: "Evidence fetch failed",
+              details: errorData.error?.message || "Could not fetch evidence from external sources",
+            }],
+            generatedAt: new Date().toISOString(),
+          };
+          try {
+            await updateSubmission(submissionId, { evidence });
+          } catch (firestoreErr: any) {
+            console.error("[Form] Failed to store evidence error in Firestore:", firestoreErr?.message || firestoreErr);
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn("Error fetching evidence:", err);
-        // Continue without evidence
+        // Store evidence object with warnings instead of null
+        evidence = {
+          google: { configured: false, queries: [] },
+          hackernews: { hits: [] },
+          competitors: [],
+          competitorSummary: { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" },
+          signals: {
+            competitor_density: 0,
+            recency_score: 50,
+            pain_signal: 0,
+            overall_evidence_score: 0,
+            evidenceCoverage: 0,
+            marketEstablished: false,
+            notes: ["Evidence fetch error"],
+          },
+          citations: [],
+          warnings: [{
+            type: "api_error",
+            message: "Evidence fetch error",
+            details: err?.message || "Unexpected error while fetching evidence",
+          }],
+          generatedAt: new Date().toISOString(),
+        };
+        try {
+          await updateSubmission(submissionId, { evidence });
+        } catch (firestoreErr: any) {
+          console.error("[Form] Failed to store evidence error in Firestore:", firestoreErr?.message || firestoreErr);
+        }
       }
 
       // Call verdict API with evidence

@@ -79,7 +79,47 @@ Evidence Notes:
 ${signals.notes?.map((note: string) => `- ${note}`).join("\n") || "- No additional notes"}
 
 Top Google Snippets (for context):
-${evidence.google?.queries?.flatMap((q: any) => q.items?.slice(0, 2).map((item: any) => `- ${item.title}: ${item.snippet.substring(0, 150)}...`)).slice(0, 5).join("\n") || "- No snippets available"}`;
+${evidence.google?.queries?.flatMap((q: any) => q.items?.slice(0, 2).map((item: any) => `- ${item.title}: ${(item.snippet || "").substring(0, 150)}...`)).slice(0, 5).join("\n") || "- No snippets available"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AVAILABLE CITATIONS FOR EVIDENCE CITATIONS (USE THESE IN YOUR REASONS):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${(() => {
+  const citations: string[] = [];
+  
+  // Google citations (top 10)
+  const googleItems = evidence.google?.queries?.flatMap((q: any) => q.items || []) || [];
+  googleItems.slice(0, 10).forEach((item: any, idx: number) => {
+    if (item.title && item.link) {
+      const snippet = (item.snippet || "").substring(0, 150);
+      citations.push(`GOOGLE-${idx + 1}: Title="${item.title}" | URL=${item.link} | Snippet="${snippet}"`);
+    }
+  });
+  
+  // HN citations (top 5)
+  const hnHits = evidence.hackernews?.hits || [];
+  hnHits.slice(0, 5).forEach((hit: any, idx: number) => {
+    if (hit.title && hit.url) {
+      citations.push(`HN-${idx + 1}: Title="${hit.title}" | URL=${hit.url} | Comments=${hit.num_comments || 0} | Points=${hit.points || 0}`);
+    }
+  });
+  
+  // Website evidence citations (if available)
+  if (startup?.websiteEvidence?.pages) {
+    startup.websiteEvidence.pages.slice(0, 3).forEach((page: any, idx: number) => {
+      const snippet = (page.snippet || "").substring(0, 150);
+      citations.push(`WEBSITE-${idx + 1}: Title="${page.title || page.url}" | URL=${page.url} | Snippet="${snippet}"`);
+    });
+  }
+  
+  return citations.length > 0 
+    ? citations.join("\n") 
+    : "No citations available (evidence may be empty or incomplete)";
+})()}
+
+CRITICAL: When writing each reason, you MUST include an evidenceCitations array with 2-4 citations from the list above. 
+Copy the EXACT title, url, and snippet values. Use source: "google" for GOOGLE-X, "hackernews" for HN-X, "website" for WEBSITE-X.`;
 
     // Hard constraints based on evidence
     hardConstraints = `
@@ -120,11 +160,13 @@ CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE RULES:
    - For each competitor: name, category, whatTheyDo (1 sentence), whyOverlaps (1 sentence), link
    - Reference actual competitors found, not hypothetical ones
 
-6. REASONS WITH CITATIONS:
+6. REASONS WITH CITATIONS (MANDATORY):
    - Each reason MUST include evidenceCitations array when evidence is available
-   - Citations should reference: Google results, HN posts, or websiteEvidence pages
-   - Format: {title, url, snippet (first 150 chars), source: "google"|"hackernews"|"website"}
-   - If no evidence available for a reason, state that in the reason detail
+   - Use citations from the "AVAILABLE CITATIONS" section above
+   - For each citation, use the EXACT format: {title: "exact title from citation", url: "exact url from citation", snippet: "first 150 chars of snippet", source: "google"|"hackernews"|"website"}
+   - Include 2-4 citations per reason that support that specific reason
+   - If evidence exists but no citations match a reason, still include the most relevant citations
+   - Only omit evidenceCitations if there are truly NO citations available (evidence.google.queries empty AND evidence.hackernews.hits empty AND no websiteEvidence)
 
 7. METHODOLOGY (MUST INCLUDE):
    - List the Google CSE queries used (show 5 sample queries)
@@ -172,7 +214,7 @@ ${startup.websiteUrl ? `Website: ${startup.websiteUrl}` : ""}
 
 ${startup.websiteEvidence ? `
 Website Evidence (${startup.websiteEvidence.pages?.length || 0} pages fetched):
-${startup.websiteEvidence.pages?.map((p: any) => `- ${p.url}${p.title ? ` - ${p.title}` : ""}\n  ${p.snippet.substring(0, 200)}...`).join("\n") || "No pages"}
+${startup.websiteEvidence.pages?.map((p: any) => `- ${p.url}${p.title ? ` - ${p.title}` : ""}\n  ${(p.snippet || "").substring(0, 200)}...`).join("\n") || "No pages"}
 ${startup.websiteEvidence.warnings && startup.websiteEvidence.warnings.length > 0 ? `\nWarnings: ${startup.websiteEvidence.warnings.join(", ")}` : ""}
 ` : ""}
 
@@ -203,7 +245,10 @@ ${hardConstraints}
 Provide:
 1. Verdict: BUILD (strong validation), RISKY (saturated/unclear differentiation), or DONT_BUILD (poor fit)
 2. Confidence: HIGH, MEDIUM, or LOW (must reflect evidence quality)
-3. 3-6 reasons - each MUST reference evidence when available. Include evidenceCitations array with {title, url, snippet, source} for each reason.
+3. 3-6 reasons - each MUST include evidenceCitations array with citations from the "AVAILABLE CITATIONS" section above. 
+   - Format each citation: {title: "exact title", url: "exact url", snippet: "first 150 chars", source: "google"|"hackernews"|"website"}
+   - Include 2-4 citations per reason that directly support that reason
+   - If no citations available, omit evidenceCitations (but this should be rare if evidence exists)
 4. 2-3 pivot/refine options with smaller MVPs. Include: whoToTarget, whatToBuild, week1Experiment, successMetric, smallestMVP.
 5. competitorAnalysis: Array of top 5 competitors found (name, category, whatTheyDo, whyOverlaps, link) - MUST be from evidence only
 6. Transparency section:
@@ -214,7 +259,8 @@ Provide:
 REMEMBER: 
 - Be evidence-grounded. Never claim "no competitors" if evidence shows otherwise.
 - Do NOT invent startup facts. If startup context says "unknown", state that in limitations.
-- Each reason should cite specific evidence sources when available.`;
+- Each reason MUST cite specific evidence sources from the AVAILABLE CITATIONS list when evidence exists.
+- Copy citation data EXACTLY from the AVAILABLE CITATIONS section - do not invent or modify titles/URLs.`;
 }
 
 export function getSprintPrompt(

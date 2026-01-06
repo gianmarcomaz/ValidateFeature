@@ -520,7 +520,14 @@ All API routes are server-side only (never exposed to client).
 - Normalizes results and computes signals (competitor_density, recency_score, pain_signal, overall_evidence_score)
 - Returns top citations and evidence summary
 
-**Note:** Requires `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_CX` in environment. Hacker News is free (no key required). If Google CSE fails, returns partial results from Hacker News only.
+**Note:** 
+- **Hacker News**: FREE, NO API KEY REQUIRED - Uses public Algolia API
+- **Google CSE**: REQUIRES API KEYS - Must set `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_CX` in environment
+- If Google CSE is not configured, the app will still work but only use Hacker News data
+- There is NO CLI or alternative way to use Google CSE without API keys - it's a paid Google service
+
+**To test if APIs are working:**
+- Visit `/api/test-evidence` in your browser to see which APIs are configured and working
 
 ### `POST /api/llm/sprint`
 

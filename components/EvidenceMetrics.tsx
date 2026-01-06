@@ -357,6 +357,11 @@ export function EvidenceMetrics({ evidence }: EvidenceMetricsProps) {
                   ⚠️ Google CSE not configured - only Hacker News data available. Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX in .env.local
                 </p>
               )}
+              {googleConfigured && googleCount === 0 && (
+                <p className="text-xs text-yellow-400/80 mt-2">
+                  ⚠️ Google CSE may be missing/misconfigured or returned 0 results. Check API keys and quota.
+                </p>
+              )}
             </div>
           </div>
 

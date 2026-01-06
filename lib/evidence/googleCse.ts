@@ -97,9 +97,9 @@ export async function googleSearch(q: string): Promise<GoogleSearchResult> {
     }
 
     const items: GoogleCseItem[] = (data.items || []).map((item) => ({
-      title: item.title,
-      snippet: item.snippet,
-      link: item.link,
+      title: item.title ?? "",
+      snippet: item.snippet ?? "",
+      link: item.link ?? "",
       displayLink: item.displayLink,
     }));
 
@@ -133,14 +133,27 @@ export function generateSearchQueries(keywords: string[]): string[] {
 
 /**
  * Search Google CSE with multiple queries
+ * Returns results and any errors encountered
  */
-export async function searchGoogleCse(queries: string[]): Promise<GoogleCseQueryResult[]> {
+export async function searchGoogleCse(queries: string[]): Promise<{
+  results: GoogleCseQueryResult[];
+  configured: boolean;
+  errors: Array<{ error: { type: string; message: string; statusCode?: number } }>;
+}> {
   const results: GoogleCseQueryResult[] = [];
+  const errors: Array<{ error: { type: string; message: string; statusCode?: number } }> = [];
+  const configured = !!(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_CX);
 
   // Execute searches sequentially to avoid rate limits
   for (const query of queries) {
-    const result = await googleSearch(query);
-    results.push(result);
+    const searchResult = await googleSearch(query);
+    // Extract the result field (which is GoogleCseQueryResult)
+    results.push(searchResult.result);
+    
+    // Track errors if any
+    if (searchResult.error) {
+      errors.push({ error: searchResult.error });
+    }
     
     // Small delay between requests to be respectful
     if (queries.indexOf(query) < queries.length - 1) {
@@ -148,6 +161,6 @@ export async function searchGoogleCse(queries: string[]): Promise<GoogleCseQuery
     }
   }
 
-  return results;
+  return { results, configured, errors };
 }
 

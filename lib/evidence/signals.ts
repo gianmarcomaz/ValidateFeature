@@ -123,7 +123,9 @@ function computePainSignal(googleResults: NormalizedEvidence["google"], hnResult
   let painScore = 0;
 
   // Check Google snippets for pain indicators
-  const allSnippets = googleResults.queries.flatMap(q => q.items.map(item => item.snippet.toLowerCase()));
+  const allSnippets = googleResults.queries.flatMap(q => 
+    q.items.map(item => (item.snippet || "").toLowerCase()).filter(s => s.length > 0)
+  );
   let painMatches = 0;
   
   allSnippets.forEach(snippet => {
@@ -321,12 +323,14 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
   
   // From Google: find snippets with pain keywords
   for (const item of allGoogleItems) {
-    const lowerSnippet = item.snippet.toLowerCase();
+    const snippet = item.snippet || "";
+    if (snippet.length === 0) continue;
+    const lowerSnippet = snippet.toLowerCase();
     if (PAIN_INDICATORS.some(indicator => lowerSnippet.includes(indicator)) && painIndicators.length < 3) {
       painIndicators.push({
-        title: item.title,
-        url: item.link,
-        snippet: item.snippet.substring(0, 200),
+        title: item.title || "",
+        url: item.link || "",
+        snippet: snippet.substring(0, 200),
         source: "google",
       });
     }

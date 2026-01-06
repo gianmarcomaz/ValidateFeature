@@ -82,7 +82,9 @@ function isProductDomain(domain: string): boolean {
  */
 function computeCompetitorScore(item: GoogleCseItem, domain: string): number {
   let score = 0;
-  const text = `${item.title} ${item.snippet}`.toLowerCase();
+  const title = item.title || "";
+  const snippet = item.snippet || "";
+  const text = `${title} ${snippet}`.toLowerCase();
 
   // High-value indicators
   if (isEnterpriseATS(domain)) score += 50;
@@ -113,7 +115,9 @@ function computeCompetitorScore(item: GoogleCseItem, domain: string): number {
  * Classify competitor category
  */
 function classifyCategory(item: GoogleCseItem, domain: string): CompetitorCategory {
-  const text = `${item.title} ${item.snippet}`.toLowerCase();
+  const title = item.title || "";
+  const snippet = item.snippet || "";
+  const text = `${title} ${snippet}`.toLowerCase();
   const scores: Record<CompetitorCategory, number> = {
     "ATS": 0,
     "Resume Optimizer": 0,
@@ -146,7 +150,7 @@ function classifyCategory(item: GoogleCseItem, domain: string): CompetitorCatego
  * Generate overlap reason from evidence
  */
 function generateOverlapReason(item: GoogleCseItem, category: CompetitorCategory): string {
-  const snippet = item.snippet.substring(0, 200);
+  const snippet = (item.snippet || "").substring(0, 200);
   
   if (category === "ATS") {
     return `ATS platform that handles resume parsing and candidate tracking`;
@@ -188,7 +192,9 @@ export function extractCompetitorsFromGoogle(results: GoogleCseQueryResult[]): C
       // Skip non-product domains
       if (!isProductDomain(domain) && !isEnterpriseATS(domain)) {
         // Allow if title/snippet suggests product
-        const text = `${item.title} ${item.snippet}`.toLowerCase();
+        const title = item.title || "";
+        const snippet = item.snippet || "";
+        const text = `${title} ${snippet}`.toLowerCase();
         const hasProductTerms = PRODUCT_INDICATORS.some(term => text.includes(term)) ||
           Object.values(CATEGORY_KEYWORDS).flat().some(kw => text.includes(kw.toLowerCase()));
         
@@ -221,7 +227,7 @@ export function extractCompetitorsFromGoogle(results: GoogleCseQueryResult[]): C
         url: item.link,
         category,
         overlapReason: generateOverlapReason(item, category),
-        evidenceSnippets: [item.snippet.substring(0, 150)],
+        evidenceSnippets: [(item.snippet || "").substring(0, 150)],
         confidence,
       };
     })

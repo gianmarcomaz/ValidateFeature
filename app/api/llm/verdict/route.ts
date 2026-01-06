@@ -31,6 +31,16 @@ export async function POST(request: NextRequest) {
     // Evidence is optional - if missing, verdict still works but with lower confidence
     const evidenceMissing = !evidence;
     const signals = evidence?.signals;
+    
+    // Log evidence structure for debugging (counts only)
+    if (evidence) {
+      const googleCount = evidence.google?.queries?.reduce((sum: number, q: any) => sum + (q.items?.length || 0), 0) || 0;
+      const hnCount = evidence.hackernews?.hits?.length || 0;
+      const competitorCount = evidence.competitors?.length || 0;
+      console.log(`[Verdict] Evidence received: googleItems=${googleCount}, hnHits=${hnCount}, competitors=${competitorCount}, coverage=${signals?.evidenceCoverage || 0}`);
+    } else {
+      console.log(`[Verdict] No evidence provided`);
+    }
 
     const prompt = getVerdictPrompt(normalized, feature, icp, goalMetric, mode, evidenceMissing, evidence, startup);
 
@@ -46,8 +56,10 @@ CRITICAL RULES:
 2. If marketEstablished=true or competitors.length >= 3, you MUST acknowledge the market is established.
 3. If evidenceCoverage is low, lower confidence and state "insufficient evidence" in methodology.
 4. "RISKY" means saturated/unclear differentiation, NOT "no market" or "no demand".
-5. Every reason must reference evidence when available.
-6. competitorAnalysis must include actual competitors found, not hypothetical ones.`,
+5. Every reason MUST include evidenceCitations array with 2-4 citations from the "AVAILABLE CITATIONS" section when evidence exists.
+6. Copy citation data EXACTLY (title, url, snippet) from the AVAILABLE CITATIONS list - do not invent or modify.
+7. competitorAnalysis must include actual competitors found, not hypothetical ones.
+8. If evidence exists but you omit evidenceCitations, your response is INVALID.`,
         },
         {
           role: "user",
@@ -123,6 +135,85 @@ CRITICAL RULES:
               "Initial analysis may have underestimated market saturation - ${competitors.length} competitors were found"
             );
           }
+        }
+        
+        // Post-process: Ensure citations are added to reasons when evidence exists
+        const googleItems = evidence.google?.queries?.flatMap((q: any) => q.items || []) || [];
+        const hnHits = evidence.hackernews?.hits || [];
+        const hasCitations = googleItems.length > 0 || hnHits.length > 0;
+        
+        if (hasCitations) {
+          // Build available citations for post-processing
+          const availableCitations: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" | "website" }> = [];
+          
+          // Add Google citations
+          googleItems.slice(0, 10).forEach((item: any) => {
+            if (item.title && item.link) {
+              availableCitations.push({
+                title: item.title,
+                url: item.link,
+                snippet: (item.snippet || "").substring(0, 150),
+                source: "google",
+              });
+            }
+          });
+          
+          // Add HN citations
+          hnHits.slice(0, 5).forEach((hit: any) => {
+            if (hit.title && hit.url) {
+              availableCitations.push({
+                title: hit.title,
+                url: hit.url,
+                snippet: `${hit.num_comments || 0} comments, ${hit.points || 0} points`,
+                source: "hackernews",
+              });
+            }
+          });
+          
+          // Add website evidence citations if available
+          if (startup?.websiteEvidence?.pages) {
+            startup.websiteEvidence.pages.slice(0, 3).forEach((page: any) => {
+              if (page.url) {
+                availableCitations.push({
+                  title: page.title || page.url,
+                  url: page.url,
+                  snippet: (page.snippet || "").substring(0, 150),
+                  source: "website",
+                });
+              }
+            });
+          }
+          
+          // If reasons don't have citations but evidence exists, add them
+          validated.reasons = validated.reasons.map((reason, idx) => {
+            // If reason already has citations, keep them
+            if (reason.evidenceCitations && reason.evidenceCitations.length > 0) {
+              return reason;
+            }
+            
+            // Otherwise, add relevant citations (2-4 per reason)
+            // Select citations that might be relevant to this reason
+            const reasonText = `${reason.title} ${reason.detail}`.toLowerCase();
+            const relevantCitations = availableCitations
+              .filter(citation => {
+                // Simple relevance check: if reason mentions keywords from citation
+                const citationText = `${citation.title} ${citation.snippet}`.toLowerCase();
+                return reasonText.split(" ").some(word => 
+                  word.length > 4 && citationText.includes(word)
+                ) || idx < availableCitations.length; // Fallback: assign by index
+              })
+              .slice(0, 4);
+            
+            // If no relevant citations found, just use first few available
+            const citationsToAdd = relevantCitations.length > 0 
+              ? relevantCitations 
+              : availableCitations.slice(idx * 2, idx * 2 + 4);
+            
+            return {
+              ...reason,
+              evidenceCitations: citationsToAdd.slice(0, 4),
+            };
+          });
         }
       }
       

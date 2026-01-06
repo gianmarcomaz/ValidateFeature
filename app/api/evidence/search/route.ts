@@ -83,25 +83,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch evidence from both sources
+    // Fetch evidence from both sources (with error handling)
     // Google: Execute searches using searchGoogleCse helper
-    const googleSearchResult = await searchGoogleCse(searchQueries);
-    const googleResults = googleSearchResult.results;
-    const googleConfigured = googleSearchResult.configured;
+    let googleResults: GoogleCseQueryResult[] = [];
+    let googleConfigured = false;
+    let googleErrors: any[] = [];
+    
+    try {
+      const googleSearchResult = await searchGoogleCse(searchQueries);
+      googleResults = googleSearchResult.results || [];
+      googleConfigured = googleSearchResult.configured || false;
+      googleErrors = googleSearchResult.errors || [];
+    } catch (err: any) {
+      console.error("[Evidence] Google CSE fetch failed:", err?.message || err);
+      googleErrors.push({ error: { type: "api_error", message: err?.message || "Google CSE fetch failed" } });
+      // Continue with empty Google results
+    }
 
-    // Hacker News: Fetch
+    // Hacker News: Fetch (NO API KEY REQUIRED - uses public Algolia API)
     let hnResults: Awaited<ReturnType<typeof searchHackerNews>> = [];
     try {
+      console.log(`[Evidence] Fetching Hacker News for keywords: ${keywords.slice(0, 3).join(", ")}`);
       hnResults = await searchHackerNews(keywords);
       console.log(`[Evidence] Hacker News: ${hnResults.length} hits found`);
-    } catch (err) {
-      console.error("[Evidence] Hacker News fetch failed:", err);
+      if (hnResults.length > 0) {
+        console.log(`[Evidence] Sample HN hit: ${hnResults[0].title} (${hnResults[0].url || "no URL"})`);
+      }
+    } catch (err: any) {
+      console.error("[Evidence] Hacker News fetch failed:", err?.message || err);
       // Continue with empty HN results
     }
 
-    // Extract competitors from Google results
-    const competitors = extractCompetitorsFromGoogle(googleResults);
-    const competitorSummary = generateCompetitorSummary(competitors);
+    // Extract competitors from Google results (safe even if empty)
+    let competitors: any[] = [];
+    let competitorSummary: any = { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" as const };
+    
+    try {
+      competitors = extractCompetitorsFromGoogle(googleResults);
+      competitorSummary = generateCompetitorSummary(competitors);
+    } catch (err) {
+      console.error("[Evidence] Competitor extraction failed:", err);
+      // Continue with empty competitors
+    }
 
     // Build warnings array
     const warnings: NormalizedEvidence["warnings"] = [];
@@ -114,8 +137,8 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    if (googleSearchResult.errors.length > 0) {
-      const errorTypes = new Set(googleSearchResult.errors.map(e => e.error?.type));
+    if (googleErrors.length > 0) {
+      const errorTypes = new Set(googleErrors.map((e: any) => e?.error?.type || e?.type));
       if (errorTypes.has("rate_limit")) {
         warnings.push({
           type: "api_error",
@@ -128,6 +151,15 @@ export async function POST(request: NextRequest) {
           message: "Google CSE authentication failed",
           details: "Check your API key and quota",
         });
+      } else if (errorTypes.has("api_error") || errorTypes.has("missing_config")) {
+        // missing_config is already handled above, but check for api_error
+        if (!errorTypes.has("missing_config")) {
+          warnings.push({
+            type: "api_error",
+            message: "Google CSE API error occurred",
+            details: "Some search queries may have failed",
+          });
+        }
       }
     }
     
@@ -142,33 +174,132 @@ export async function POST(request: NextRequest) {
     
     // Log evidence for debugging (structured, no secrets)
     console.log(`[Evidence] googleConfigured=${googleConfigured}, googleItems=${googleItemCount}, hnHits=${hnResults.length}, competitors=${competitors.length}, warnings=${warnings.length}`);
+    
+    // Additional debug: Check if APIs are actually being called
+    if (!googleConfigured) {
+      console.log(`[Evidence] Google CSE not configured - check GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX env vars`);
+    } else if (googleItemCount === 0) {
+      console.log(`[Evidence] Google CSE configured but returned 0 items - check API quota or query relevance`);
+    }
+    
+    if (hnResults.length === 0) {
+      console.log(`[Evidence] HN returned 0 hits for keywords: ${keywords.slice(0, 3).join(", ")}`);
+    }
 
-    // Normalize evidence (includes competitors now)
-    const normalized = normalizeEvidence(googleResults, hnResults, competitors);
+    // Normalize evidence (includes competitors now) - safe even if empty
+    let normalized: any;
+    let signals: any;
+    
+    try {
+      normalized = normalizeEvidence(googleResults, hnResults, competitors);
 
-    // Add competitors and summary to normalized evidence with Google config status
-    const evidenceWithCompetitors = {
-      ...normalized,
-      google: {
-        ...normalized.google,
-        configured: googleConfigured,
-      },
-      competitors,
-      competitorSummary,
-    };
+      // Add competitors and summary to normalized evidence with Google config status
+      const evidenceForSignals = {
+        ...normalized,
+        google: {
+          ...normalized.google,
+          configured: googleConfigured,
+        },
+        competitors,
+        competitorSummary,
+      };
 
-    // Compute signals (now includes competitor-aware logic + perMetricEvidence)
-    const signals = computeSignals(evidenceWithCompetitors);
+      // Compute signals (now includes competitor-aware logic + perMetricEvidence)
+      signals = computeSignals(evidenceForSignals);
+    } catch (err: any) {
+      console.error("[Evidence] Normalization or signal computation failed:", err);
+      // Return minimal valid evidence structure
+      normalized = {
+        google: { configured: googleConfigured, queries: googleResults },
+        hackernews: { hits: hnResults },
+        citations: [],
+        generatedAt: new Date().toISOString(),
+      };
+      signals = {
+        competitor_density: 0,
+        recency_score: 50,
+        pain_signal: 0,
+        overall_evidence_score: 0,
+        evidenceCoverage: 0,
+        marketEstablished: false,
+        notes: ["Evidence normalization failed - using minimal structure"],
+      };
+      warnings.push({
+        type: "api_error",
+        message: "Evidence processing error",
+        details: "Some evidence data may be incomplete",
+      });
+    }
     
     // Structured logging (counts only, no secrets)
-    console.log(`[Evidence] Signals: competitorDensity=${Math.round(signals.competitor_density)}, evidenceCoverage=${Math.round(signals.evidenceCoverage)}, marketEstablished=${signals.marketEstablished}`);
+    const evidenceCoverage = signals?.evidenceCoverage || 0;
+    console.log(`[Evidence] Signals: competitorDensity=${Math.round(signals?.competitor_density || 0)}, evidenceCoverage=${Math.round(evidenceCoverage)}, marketEstablished=${signals?.marketEstablished || false}`);
 
-    // Combine into full evidence object
+    // Build final evidence object (always defined, regardless of success/failure path)
+    // Ensure all required fields are present with safe defaults
     const evidence: NormalizedEvidence = {
-      ...evidenceWithCompetitors,
-      signals,
+      google: {
+        configured: googleConfigured,
+        queries: normalized?.google?.queries || googleResults || [],
+      },
+      hackernews: {
+        hits: normalized?.hackernews?.hits || hnResults || [],
+      },
+      competitors: competitors || [],
+      competitorSummary: competitorSummary || { 
+        totalCompetitorsFound: 0, 
+        topCompetitors: [], 
+        saturationSignal: "low" as const 
+      },
+      citations: normalized?.citations || [],
+      signals: signals || {
+        competitor_density: 0,
+        recency_score: 50,
+        pain_signal: 0,
+        overall_evidence_score: 0,
+        evidenceCoverage: 0,
+        marketEstablished: false,
+        notes: ["Evidence processing incomplete"],
+      },
       warnings: warnings.length > 0 ? warnings : undefined,
+      generatedAt: normalized?.generatedAt || new Date().toISOString(),
     };
+
+    // Final safety check - ensure evidence object is valid
+    if (!evidence.google || !evidence.hackernews || !evidence.signals) {
+      console.error("[Evidence] Invalid evidence structure built - using fallback");
+      return NextResponse.json(
+        {
+          error: {
+            code: "EVIDENCE_STRUCTURE_ERROR",
+            message: "Failed to build valid evidence structure",
+          },
+          evidence: {
+            google: { configured: false, queries: [] },
+            hackernews: { hits: [] },
+            competitors: [],
+            competitorSummary: { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" },
+            citations: [],
+            signals: {
+              competitor_density: 0,
+              recency_score: 50,
+              pain_signal: 0,
+              overall_evidence_score: 0,
+              evidenceCoverage: 0,
+              marketEstablished: false,
+              notes: ["Evidence structure error"],
+            },
+            warnings: [{
+              type: "api_error",
+              message: "Evidence structure error",
+              details: "Failed to build valid evidence object",
+            }],
+            generatedAt: new Date().toISOString(),
+          },
+        },
+        { status: 200 } // Return 200 with error in payload, not 500
+      );
+    }
 
     return NextResponse.json({ evidence });
   } catch (error: any) {
