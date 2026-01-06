@@ -28,12 +28,13 @@ Be specific, actionable, and focus on what can be measured.`;
 
 export function getVerdictPrompt(
   normalized: any,
-  feature: { title: string; description: string },
+  feature: { title: string; description: string; problemSolved?: string; targetAudience?: string },
   icp: { role: string; industry?: string; companySize?: string },
   goalMetric: string,
   mode: "early" | "existing",
   signalsUnavailable: boolean,
-  evidence?: any
+  evidence?: any,
+  startup?: any
 ): string {
   let evidenceSection = "";
   let hardConstraints = "";
@@ -90,6 +91,7 @@ CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE RULES:
    - Use ONLY the evidence provided above. Do NOT claim facts not in the evidence.
    - If evidence shows ${competitors.length} competitors found, you MUST acknowledge this.
    - If marketEstablished=true, you MUST state the market is established in your reasons.
+   - If startup context is provided, use ONLY facts from startup context or websiteEvidence. If field is "unknown", state that.
 
 2. NEVER CLAIM "NO COMPETITORS" OR "NO MARKET" IF:
    - competitors.length >= 3, OR
@@ -103,7 +105,8 @@ CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE RULES:
      * Lower confidence to LOW or MEDIUM
      * State "insufficient evidence" in methodology
      * Do NOT guess about market status
-   
+   - If startup context has "unknown" fields, mention this in limitations
+
 4. VERDICT "RISKY" MEANS:
    - Market is saturated/competitive (NOT "no market")
    - Differentiation is unclear
@@ -117,16 +120,24 @@ CRITICAL CONSTRAINTS - YOU MUST FOLLOW THESE RULES:
    - For each competitor: name, category, whatTheyDo (1 sentence), whyOverlaps (1 sentence), link
    - Reference actual competitors found, not hypothetical ones
 
-6. METHODOLOGY (MUST INCLUDE):
+6. REASONS WITH CITATIONS:
+   - Each reason MUST include evidenceCitations array when evidence is available
+   - Citations should reference: Google results, HN posts, or websiteEvidence pages
+   - Format: {title, url, snippet (first 150 chars), source: "google"|"hackernews"|"website"}
+   - If no evidence available for a reason, state that in the reason detail
+
+7. METHODOLOGY (MUST INCLUDE):
    - List the Google CSE queries used (show 5 sample queries)
    - Explain competitor extraction method (found via Google search)
    - Note that HN may not represent recruiter/HR discussions when HN hits are low
    - Mention evidence coverage level
+   - If websiteEvidence was used, mention which pages were analyzed
 
-7. TRANSPARENCY:
+8. TRANSPARENCY:
    - If market is established but verdict is RISKY, explain why (saturation, differentiation, etc.)
    - If competitors found but not mentioned, explain reasoning
    - Always cite evidence (e.g., "Based on ${googleCount} search results, we found ${competitors.length} competitors including...")
+   - If startup context incomplete, state what's missing
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   } else {
@@ -142,10 +153,41 @@ CRITICAL: Without external evidence, you MUST:
 - Do NOT claim market status without evidence`;
   }
 
+  // Build startup context section
+  let startupSection = "";
+  if (startup) {
+    startupSection = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STARTUP CONTEXT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Startup Name: ${startup.name || "unknown"}
+Description: ${startup.description || "unknown"}
+What It Does: ${startup.whatItDoes || "unknown"}
+Problem Solved: ${startup.problemSolved || "unknown"}
+Target Audience: ${startup.targetAudience || "unknown"}
+${startup.businessModel ? `Business Model: ${startup.businessModel}` : ""}
+${startup.differentiators && startup.differentiators.length > 0 ? `Differentiators: ${startup.differentiators.join(", ")}` : ""}
+${startup.websiteUrl ? `Website: ${startup.websiteUrl}` : ""}
+
+${startup.websiteEvidence ? `
+Website Evidence (${startup.websiteEvidence.pages?.length || 0} pages fetched):
+${startup.websiteEvidence.pages?.map((p: any) => `- ${p.url}${p.title ? ` - ${p.title}` : ""}\n  ${p.snippet.substring(0, 200)}...`).join("\n") || "No pages"}
+${startup.websiteEvidence.warnings && startup.websiteEvidence.warnings.length > 0 ? `\nWarnings: ${startup.websiteEvidence.warnings.join(", ")}` : ""}
+` : ""}
+
+CRITICAL: Use ONLY facts from startup context or websiteEvidence. If information is "unknown", do NOT invent facts.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  }
+
   return `You are a product validation expert. Analyze this feature idea and provide a verdict.
 
+${startupSection}
 Feature: ${feature.title}
 ${feature.description}
+${feature.problemSolved ? `\nProblem Solved: ${feature.problemSolved}` : ""}
+${feature.targetAudience ? `\nTarget Audience: ${feature.targetAudience}` : ""}
 
 Normalized Analysis:
 ${JSON.stringify(normalized, null, 2)}
@@ -161,15 +203,18 @@ ${hardConstraints}
 Provide:
 1. Verdict: BUILD (strong validation), RISKY (saturated/unclear differentiation), or DONT_BUILD (poor fit)
 2. Confidence: HIGH, MEDIUM, or LOW (must reflect evidence quality)
-3. 3-6 reasons - each MUST reference evidence when available
-4. 2-3 pivot/refine options with smaller MVPs
-5. competitorAnalysis: Array of top 5 competitors found (name, category, whatTheyDo, whyOverlaps, link)
+3. 3-6 reasons - each MUST reference evidence when available. Include evidenceCitations array with {title, url, snippet, source} for each reason.
+4. 2-3 pivot/refine options with smaller MVPs. Include: whoToTarget, whatToBuild, week1Experiment, successMetric, smallestMVP.
+5. competitorAnalysis: Array of top 5 competitors found (name, category, whatTheyDo, whyOverlaps, link) - MUST be from evidence only
 6. Transparency section:
-   - assumptions: What you assumed
-   - limitations: What evidence was missing/limited
-   - methodology: How you analyzed (include query samples, competitor extraction method)
+   - assumptions: What you assumed (include startup context assumptions if provided)
+   - limitations: What evidence was missing/limited (mention if startup context incomplete)
+   - methodology: How you analyzed (include query samples, competitor extraction method, website evidence usage if available)
 
-REMEMBER: Be evidence-grounded. Never claim "no competitors" if evidence shows otherwise.`;
+REMEMBER: 
+- Be evidence-grounded. Never claim "no competitors" if evidence shows otherwise.
+- Do NOT invent startup facts. If startup context says "unknown", state that in limitations.
+- Each reason should cite specific evidence sources when available.`;
 }
 
 export function getSprintPrompt(

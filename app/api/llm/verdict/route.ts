@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { feature, icp, goalMetric, mode, normalized, evidence } = body;
+    const { feature, icp, goalMetric, mode, normalized, evidence, startup } = body;
 
     if (!feature || !icp || !goalMetric || !mode || !normalized) {
       return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const evidenceMissing = !evidence;
     const signals = evidence?.signals;
 
-    const prompt = getVerdictPrompt(normalized, feature, icp, goalMetric, mode, evidenceMissing, evidence);
+    const prompt = getVerdictPrompt(normalized, feature, icp, goalMetric, mode, evidenceMissing, evidence, startup);
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -84,10 +84,93 @@ CRITICAL RULES:
     
     // Validate with Zod
     try {
-      const validated = VerdictResponseSchema.parse(verdict);
+      let validated = VerdictResponseSchema.parse(verdict);
+      
+      // Post-process: Ensure verdict respects evidence constraints
+      if (evidence) {
+        const competitors = evidence.competitors || [];
+        const evidenceCoverage = evidence.signals?.evidenceCoverage || 0;
+        const marketEstablished = evidence.signals?.marketEstablished || false;
+        
+        // If evidence coverage is low, force lower confidence
+        if (evidenceCoverage < 30 && validated.confidence === "HIGH") {
+          validated.confidence = "MEDIUM";
+          if (!validated.transparency.limitations.some(l => l.includes("insufficient evidence"))) {
+            validated.transparency.limitations.push(
+              "Low evidence coverage - verdict based on limited data"
+            );
+          }
+        }
+        
+        // Ensure competitorAnalysis matches actual competitors
+        if (competitors.length > 0 && validated.competitorAnalysis) {
+          // Validate that competitorAnalysis references actual competitors
+          const competitorNames = new Set(competitors.map(c => c.name.toLowerCase()));
+          validated.competitorAnalysis = validated.competitorAnalysis
+            .filter(comp => {
+              const nameMatch = competitorNames.has(comp.name.toLowerCase());
+              // Allow if name matches or if URL matches a competitor
+              return nameMatch || competitors.some(c => c.url === comp.link);
+            })
+            .slice(0, 5); // Max 5
+        }
+        
+        // If market is established but verdict claims otherwise, add limitation
+        if (marketEstablished && competitors.length >= 3) {
+          const reasonsText = validated.reasons.map(r => r.detail).join(" ").toLowerCase();
+          if (reasonsText.includes("no competitors") || reasonsText.includes("no market")) {
+            validated.transparency.limitations.push(
+              "Initial analysis may have underestimated market saturation - ${competitors.length} competitors were found"
+            );
+          }
+        }
+      }
+      
       return NextResponse.json(validated);
     } catch (validationError: any) {
       console.error("Zod validation failed:", validationError);
+      
+      // If validation fails but we have evidence, return a safe fallback verdict
+      if (evidence) {
+        const competitors = evidence.competitors || [];
+        const evidenceCoverage = evidence.signals?.evidenceCoverage || 0;
+        const marketEstablished = evidence.signals?.marketEstablished || false;
+        
+        const fallbackVerdict = {
+          verdict: evidenceCoverage < 30 ? "RISKY" : marketEstablished && competitors.length >= 5 ? "RISKY" : "BUILD",
+          confidence: evidenceCoverage < 30 ? "LOW" : "MEDIUM",
+          reasons: [
+            {
+              title: "Evidence-based validation",
+              detail: `Based on ${competitors.length} competitors found and ${evidenceCoverage}/100 evidence coverage. ${evidenceCoverage < 30 ? "Limited data available - confidence reduced." : "Moderate evidence available."}`,
+            },
+          ],
+          pivotOptions: [],
+          competitorAnalysis: competitors.slice(0, 5).map(c => ({
+            name: c.name,
+            category: c.category,
+            whatTheyDo: c.overlapReason,
+            whyOverlaps: `Found via search results - ${c.category} category`,
+            link: c.url,
+          })),
+          transparency: {
+            assumptions: ["Evidence-based validation"],
+            limitations: [
+              "OpenAI verdict parsing failed - using evidence-based fallback",
+              evidenceCoverage < 30 ? "Low evidence coverage - verdict confidence reduced" : "",
+              !evidence.google?.configured ? "Google CSE not configured - only HN data available" : "",
+            ].filter(Boolean),
+            methodology: [
+              `Analyzed ${competitors.length} competitors from search results`,
+              `Evidence coverage: ${evidenceCoverage}/100`,
+              marketEstablished ? "Market appears established" : "Market establishment unclear",
+            ],
+          },
+        };
+        
+        return NextResponse.json(fallbackVerdict);
+      }
+      
       return NextResponse.json(
         { error: "Validation failed", details: validationError.errors || validationError.message },
         { status: 500 }

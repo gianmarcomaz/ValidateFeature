@@ -11,7 +11,7 @@ import {
   FieldValue
 } from "firebase/firestore";
 import { db } from "./client";
-import { SubmissionInput, NormalizedFeature, VerdictResponse, ValidationSprint } from "@/lib/domain/types";
+import { SubmissionInput, NormalizedFeature, VerdictResponse, ValidationSprint, StartupContext, FeatureContext } from "@/lib/domain/types";
 
 function ensureDb() {
   if (!db) {
@@ -20,18 +20,42 @@ function ensureDb() {
   return db;
 }
 
-// Submission document schema matching MVP requirements exactly
+// Submission document schema - backward compatible
 export interface SubmissionDocument {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   userId: string | null;
   mode: "early" | "existing";
-  featureTitle: string;
-  featureDescription: string;
+  // Legacy fields (kept for backward compatibility)
+  featureTitle?: string;
+  featureDescription?: string;
   icpRole: string;
   icpIndustry?: string;
   companySize?: string;
   goalMetric: "activation" | "retention" | "revenue" | "support";
+  // New fields (startup + feature context)
+  startup?: {
+    source: "manual" | "website";
+    websiteUrl?: string;
+    name: string;
+    description: string;
+    whatItDoes: string;
+    problemSolved: string;
+    targetAudience: string;
+    businessModel?: string;
+    differentiators?: string[];
+    websiteEvidence?: {
+      fetchedAt: number;
+      pages: Array<{ url: string; title?: string; snippet: string }>;
+      warnings?: string[];
+    };
+  };
+  feature?: {
+    title: string;
+    description: string;
+    problemSolved: string;
+    targetAudience: string;
+  };
   normalized?: NormalizedFeature;
   signals?: {
     trends: { status: "TODO" | "complete" };
@@ -56,22 +80,66 @@ export interface SprintDocument {
 export async function createSubmission(data: SubmissionInput, userId: string | null = null): Promise<string> {
   const firestoreDb = ensureDb();
   const now = serverTimestamp();
+  
+  // Build submission with backward compatibility
+  // Only include defined fields (Firestore doesn't accept undefined)
   const submission: Omit<SubmissionDocument, "createdAt" | "updatedAt"> & { 
     createdAt: any; 
     updatedAt: any;
   } = {
     userId,
     mode: data.mode,
-    featureTitle: data.feature.title,
-    featureDescription: data.feature.description,
     icpRole: data.icp.role,
-    icpIndustry: data.icp.industry,
-    companySize: data.icp.companySize,
     goalMetric: data.goalMetric,
     status: "draft",
     createdAt: now,
     updatedAt: now,
   };
+  
+  // Only include optional ICP fields if they're defined
+  if (data.icp.industry !== undefined) {
+    submission.icpIndustry = data.icp.industry;
+  }
+  if (data.icp.companySize !== undefined) {
+    submission.companySize = data.icp.companySize;
+  }
+  
+  // Add new startup + feature context if provided
+  // Remove undefined values (Firestore doesn't accept undefined)
+  if (data.startup) {
+    const cleanStartup: any = {};
+    // Only include defined fields
+    if (data.startup.source !== undefined) cleanStartup.source = data.startup.source;
+    if (data.startup.websiteUrl !== undefined) cleanStartup.websiteUrl = data.startup.websiteUrl;
+    if (data.startup.name !== undefined) cleanStartup.name = data.startup.name;
+    if (data.startup.description !== undefined) cleanStartup.description = data.startup.description;
+    if (data.startup.whatItDoes !== undefined) cleanStartup.whatItDoes = data.startup.whatItDoes;
+    if (data.startup.problemSolved !== undefined) cleanStartup.problemSolved = data.startup.problemSolved;
+    if (data.startup.targetAudience !== undefined) cleanStartup.targetAudience = data.startup.targetAudience;
+    if (data.startup.businessModel !== undefined) cleanStartup.businessModel = data.startup.businessModel;
+    if (data.startup.differentiators !== undefined && data.startup.differentiators.length > 0) {
+      cleanStartup.differentiators = data.startup.differentiators;
+    }
+    if (data.startup.websiteEvidence !== undefined) {
+      cleanStartup.websiteEvidence = data.startup.websiteEvidence;
+    }
+    submission.startup = cleanStartup;
+  }
+  if (data.feature) {
+    const cleanFeature: any = {};
+    // Only include defined fields
+    if (data.feature.title !== undefined) cleanFeature.title = data.feature.title;
+    if (data.feature.description !== undefined) cleanFeature.description = data.feature.description;
+    if (data.feature.problemSolved !== undefined) cleanFeature.problemSolved = data.feature.problemSolved;
+    if (data.feature.targetAudience !== undefined) cleanFeature.targetAudience = data.feature.targetAudience;
+    submission.feature = cleanFeature;
+  }
+  
+  // Legacy fields for backward compatibility (if new fields not provided)
+  if (!data.startup && !data.feature) {
+    submission.featureTitle = (data.feature as any)?.title || "";
+    submission.featureDescription = (data.feature as any)?.description || "";
+  }
   
   const docRef = await addDoc(collection(firestoreDb, "submissions"), submission);
   return docRef.id;
@@ -92,6 +160,25 @@ export async function getSubmission(submissionId: string): Promise<SubmissionDoc
 }
 
 /**
+ * Helper function to remove undefined values from an object (Firestore doesn't accept undefined)
+ */
+function removeUndefinedValues(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefinedValues);
+  }
+  const cleaned: any = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = removeUndefinedValues(obj[key]);
+    }
+  }
+  return cleaned;
+}
+
+/**
  * Updates submission document with merge (includes updatedAt timestamp)
  */
 export async function updateSubmission(
@@ -100,9 +187,11 @@ export async function updateSubmission(
 ): Promise<void> {
   const firestoreDb = ensureDb();
   const docRef = doc(firestoreDb, "submissions", submissionId);
+  // Remove undefined values before updating (Firestore doesn't accept undefined)
+  const cleanedUpdates = removeUndefinedValues(updates);
   const updateData = {
-    ...updates,
-    updatedAt: updates.updatedAt || serverTimestamp(),
+    ...cleanedUpdates,
+    updatedAt: cleanedUpdates.updatedAt || serverTimestamp(),
   };
   await updateDoc(docRef, updateData);
 }

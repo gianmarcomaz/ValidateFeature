@@ -14,14 +14,28 @@ interface GoogleCseApiResponse {
   };
 }
 
-export async function googleSearch(q: string): Promise<GoogleCseQueryResult> {
+export interface GoogleSearchResult {
+  result: GoogleCseQueryResult;
+  error?: {
+    type: "missing_config" | "rate_limit" | "auth_error" | "api_error";
+    message: string;
+    statusCode?: number;
+  };
+}
+
+export async function googleSearch(q: string): Promise<GoogleSearchResult> {
   const apiKey = process.env.GOOGLE_CSE_API_KEY;
   const cx = process.env.GOOGLE_CSE_CX;
 
   if (!apiKey || !cx) {
-    // Return empty result instead of throwing - allows Hacker News to still work
-    console.warn("Google CSE not configured: GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX must be set in environment variables");
-    return { q, items: [] };
+    // Return empty result with error info
+    return {
+      result: { q, items: [] },
+      error: {
+        type: "missing_config",
+        message: "Google CSE API keys not configured",
+      },
+    };
   }
 
   const url = new URL("https://www.googleapis.com/customsearch/v1");
@@ -38,23 +52,48 @@ export async function googleSearch(q: string): Promise<GoogleCseQueryResult> {
       
       // Handle rate limiting
       if (response.status === 429) {
-        console.warn(`Google CSE rate limit hit for query: ${q}`);
-        return { q, items: [] };
+        return {
+          result: { q, items: [] },
+          error: {
+            type: "rate_limit",
+            message: `Rate limit exceeded for query: ${q}`,
+            statusCode: 429,
+          },
+        };
       }
 
       if (response.status === 403) {
-        console.error("Google CSE API key invalid or quota exceeded");
-        throw new Error("Google CSE authentication failed or quota exceeded");
+        return {
+          result: { q, items: [] },
+          error: {
+            type: "auth_error",
+            message: "Google CSE API key invalid or quota exceeded",
+            statusCode: 403,
+          },
+        };
       }
 
-      throw new Error(`Google CSE API error: ${response.status} ${errorData.error?.message || response.statusText}`);
+      return {
+        result: { q, items: [] },
+        error: {
+          type: "api_error",
+          message: `Google CSE API error: ${response.status}`,
+          statusCode: response.status,
+        },
+      };
     }
 
     const data: GoogleCseApiResponse = await response.json();
 
     if (data.error) {
-      console.error("Google CSE API error:", data.error);
-      return { q, items: [] };
+      return {
+        result: { q, items: [] },
+        error: {
+          type: "api_error",
+          message: data.error.message || "Unknown Google CSE API error",
+          statusCode: data.error.code,
+        },
+      };
     }
 
     const items: GoogleCseItem[] = (data.items || []).map((item) => ({
@@ -64,11 +103,15 @@ export async function googleSearch(q: string): Promise<GoogleCseQueryResult> {
       displayLink: item.displayLink,
     }));
 
-    return { q, items };
+    return { result: { q, items } };
   } catch (error: any) {
-    console.error(`Error fetching Google CSE for query "${q}":`, error);
-    // Return empty result instead of throwing to allow partial results
-    return { q, items: [] };
+    return {
+      result: { q, items: [] },
+      error: {
+        type: "api_error",
+        message: `Network error: ${error.message}`,
+      },
+    };
   }
 }
 

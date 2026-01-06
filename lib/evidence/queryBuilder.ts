@@ -4,6 +4,18 @@ import { deriveKeywords } from "./keywords";
 export interface QueryBuilderInput {
   query: string;
   keywords?: string[];
+  startup?: {
+    name?: string;
+    targetAudience?: string;
+    problemSolved?: string;
+    websiteUrl?: string;
+  };
+  feature?: {
+    title?: string;
+    description?: string;
+    problemSolved?: string;
+    targetAudience?: string;
+  };
 }
 
 /**
@@ -22,6 +34,7 @@ function isJobRelated(query: string, keywords: string[]): boolean {
 
 /**
  * Build strategic search queries for competitor discovery
+ * Now uses startup + feature context for more precise queries
  */
 export function buildSearchQueries(input: QueryBuilderInput): string[] {
   const keywords = input.keywords || deriveKeywords(input.query);
@@ -32,11 +45,52 @@ export function buildSearchQueries(input: QueryBuilderInput): string[] {
 
   const queries: string[] = [];
 
+  // Use startup context if available
+  const startupName = input.startup?.name;
+  const startupTargetAudience = input.startup?.targetAudience;
+  const startupProblem = input.startup?.problemSolved;
+  const featureTitle = input.feature?.title;
+  const featureTargetAudience = input.feature?.targetAudience;
+  const featureProblem = input.feature?.problemSolved;
+
   // Core product searches (always include)
   queries.push(`${keywordString} software`);
   queries.push(`${keywordString} tool`);
   queries.push(`${keywordString} pricing`);
   queries.push(`${keywordString} alternatives`);
+
+  // Enhanced queries using startup context
+  if (startupName && startupName !== "unknown") {
+    queries.push(`${startupName} competitors`);
+    queries.push(`alternatives to ${startupName}`);
+  }
+
+  if (startupTargetAudience && startupTargetAudience !== "unknown") {
+    queries.push(`${keywordString} for ${startupTargetAudience}`);
+  }
+
+  if (startupProblem && startupProblem !== "unknown") {
+    const problemKeywords = deriveKeywords(startupProblem).slice(0, 3).join(" ");
+    if (problemKeywords) {
+      queries.push(`${problemKeywords} solution`);
+    }
+  }
+
+  // Feature-specific queries
+  if (featureTitle) {
+    queries.push(`${featureTitle} alternatives`);
+  }
+
+  if (featureTargetAudience && featureTargetAudience !== "unknown") {
+    queries.push(`${keywordString} ${featureTargetAudience}`);
+  }
+
+  if (featureProblem && featureProblem !== "unknown") {
+    const featureProblemKeywords = deriveKeywords(featureProblem).slice(0, 3).join(" ");
+    if (featureProblemKeywords) {
+      queries.push(`${featureProblemKeywords} tool`);
+    }
+  }
 
   // Domain-specific additions
   if (isJobDomain) {
@@ -70,8 +124,8 @@ export function buildSearchQueries(input: QueryBuilderInput): string[] {
     queries.push(`${keywordString} enterprise solution`);
   }
 
-  // Cap at 8 queries (remove duplicates, take first 8)
+  // Cap at 10 queries (remove duplicates, take first 10)
   const uniqueQueries = Array.from(new Set(queries));
-  return uniqueQueries.slice(0, 8);
+  return uniqueQueries.slice(0, 10);
 }
 

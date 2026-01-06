@@ -47,6 +47,7 @@ export function normalizeEvidence(
 
   return {
     google: {
+      configured: false, // Will be set by caller
       queries: googleResults,
     },
     hackernews: {

@@ -26,6 +26,30 @@ export function PivotOptions({ options }: PivotOptionsProps) {
                 <p className="text-sm font-medium text-slate-200 mb-1">Why Stronger:</p>
                 <p className="text-sm text-slate-300">{option.whyStronger}</p>
               </div>
+              {option.whoToTarget && (
+                <div>
+                  <p className="text-sm font-medium text-slate-200 mb-1">Who to Target:</p>
+                  <p className="text-sm text-slate-300">{option.whoToTarget}</p>
+                </div>
+              )}
+              {option.whatToBuild && (
+                <div>
+                  <p className="text-sm font-medium text-slate-200 mb-1">What to Build/Change:</p>
+                  <p className="text-sm text-slate-300">{option.whatToBuild}</p>
+                </div>
+              )}
+              {option.week1Experiment && (
+                <div>
+                  <p className="text-sm font-medium text-slate-200 mb-1">Week-1 Experiment:</p>
+                  <p className="text-sm text-slate-300">{option.week1Experiment}</p>
+                </div>
+              )}
+              {option.successMetric && (
+                <div>
+                  <p className="text-sm font-medium text-slate-200 mb-1">Success Metric:</p>
+                  <p className="text-sm text-slate-300">{option.successMetric}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-slate-200 mb-1">Smallest MVP:</p>
                 <p className="text-sm text-cyan-400">{option.smallestMVP}</p>

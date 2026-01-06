@@ -15,9 +15,34 @@ export interface ICPInput {
   companySize?: string;
 }
 
+export interface StartupContext {
+  source: "manual" | "website";
+  websiteUrl?: string;
+  name: string;
+  description: string;
+  whatItDoes: string;
+  problemSolved: string;
+  targetAudience: string;
+  businessModel?: string;
+  differentiators?: string[];
+  websiteEvidence?: {
+    fetchedAt: number;
+    pages: Array<{ url: string; title?: string; snippet: string }>;
+    warnings?: string[];
+  };
+}
+
+export interface FeatureContext {
+  title: string;
+  description: string;
+  problemSolved: string;
+  targetAudience: string;
+}
+
 export interface SubmissionInput {
   mode: Mode;
-  feature: FeatureInput;
+  startup?: StartupContext; // New: optional for backward compatibility
+  feature: FeatureContext; // Updated: now uses FeatureContext
   icp: ICPInput;
   goalMetric: GoalMetric;
 }
@@ -36,6 +61,7 @@ export type Confidence = "HIGH" | "MEDIUM" | "LOW";
 export interface VerdictReason {
   title: string;
   detail: string;
+  evidenceCitations?: Array<{ title: string; url: string; snippet?: string; source: "google" | "hackernews" | "website" }>;
 }
 
 export interface PivotOption {
@@ -43,6 +69,10 @@ export interface PivotOption {
   description: string;
   whyStronger: string;
   smallestMVP: string;
+  whoToTarget?: string;
+  whatToBuild?: string;
+  week1Experiment?: string;
+  successMetric?: string;
 }
 
 export interface TransparencyInfo {

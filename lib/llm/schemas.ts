@@ -13,9 +13,17 @@ export const NormalizedFeatureSchema = z.object({
 
 export type NormalizedFeature = z.infer<typeof NormalizedFeatureSchema>;
 
+export const EvidenceCitationSchema = z.object({
+  title: z.string(),
+  url: z.string(),
+  snippet: z.string().nullable().optional(), // Nullable for OpenAI strict mode compatibility
+  source: z.enum(["google", "hackernews", "website"]),
+});
+
 export const VerdictReasonSchema = z.object({
   title: z.string(),
   detail: z.string(),
+  evidenceCitations: z.array(EvidenceCitationSchema).optional(),
 });
 
 export const PivotOptionSchema = z.object({
@@ -23,6 +31,10 @@ export const PivotOptionSchema = z.object({
   description: z.string(),
   whyStronger: z.string(),
   smallestMVP: z.string(),
+  whoToTarget: z.string().nullable().optional(), // Nullable for OpenAI strict mode
+  whatToBuild: z.string().nullable().optional(), // Nullable for OpenAI strict mode
+  week1Experiment: z.string().nullable().optional(), // Nullable for OpenAI strict mode
+  successMetric: z.string().nullable().optional(), // Nullable for OpenAI strict mode
 });
 
 export const TransparencyInfoSchema = z.object({
@@ -59,13 +71,13 @@ export const ValidationTestSchema = z.object({
 export const SurveyQuestionSchema = z.object({
   question: z.string(),
   type: z.enum(["text", "multiple-choice", "scale", "boolean"]),
-  options: z.array(z.string()).optional(),
+  options: z.array(z.string()).nullable().optional(), // Nullable for OpenAI strict mode
   required: z.boolean(),
 });
 
 export const OutreachTemplateSchema = z.object({
   platform: z.enum(["linkedin", "email"]),
-  subject: z.string().optional(),
+  subject: z.string().nullable().optional(), // Nullable for OpenAI strict mode
   body: z.string(),
 });
 
@@ -81,16 +93,53 @@ export const ValidationSprintSchema = z.object({
 export type ValidationSprint = z.infer<typeof ValidationSprintSchema>;
 
 // Helper to convert Zod schema to JSON Schema for OpenAI
-// OpenAI requires ALL properties to be in the 'required' array
+// OpenAI strict mode requires ALL properties to be in 'required' array
+// Optional/nullable fields are still included in required but can be null
 export function zodToJsonSchema(schema: z.ZodType): any {
-  const jsonSchema = zodToJson(schema);
+  const jsonSchema = zodToJson(schema, {
+    target: "openApi3",
+    $refStrategy: "none",
+  });
   
-  // OpenAI strict requirement: ALL properties must be in 'required' array
-  if (jsonSchema.properties) {
-    const allPropertyKeys = Object.keys(jsonSchema.properties);
-    jsonSchema.required = allPropertyKeys;
+  // Recursively ensure all properties are in required array (OpenAI strict mode requirement)
+  function ensureAllRequired(obj: any): any {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(ensureAllRequired);
+    }
+    
+    const fixed: any = { ...obj };
+    
+    // If this is an object with properties, ensure ALL properties are in required array
+    if (fixed.properties && typeof fixed.properties === 'object') {
+      const allPropertyKeys = Object.keys(fixed.properties);
+      // OpenAI strict mode: ALL properties must be in required array
+      fixed.required = allPropertyKeys;
+      
+      // Recursively fix nested properties
+      for (const key in fixed.properties) {
+        fixed.properties[key] = ensureAllRequired(fixed.properties[key]);
+      }
+    }
+    
+    // Recursively fix items in arrays
+    if (fixed.items) {
+      fixed.items = ensureAllRequired(fixed.items);
+    }
+    
+    // Recursively fix other nested objects
+    for (const key in fixed) {
+      if (key !== 'properties' && key !== 'required' && key !== 'items' && typeof fixed[key] === 'object') {
+        fixed[key] = ensureAllRequired(fixed[key]);
+      }
+    }
+    
+    return fixed;
   }
   
-  return jsonSchema;
+  return ensureAllRequired(jsonSchema);
 }
 

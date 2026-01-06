@@ -86,8 +86,8 @@ export default function ResultsPage() {
           verdict: submission.verdict,
           normalized: submission.normalized,
           feature: {
-            title: submission.featureTitle,
-            description: submission.featureDescription,
+            title: submission.feature?.title || submission.featureTitle || "",
+            description: submission.feature?.description || submission.featureDescription || "",
           },
         }),
       });
@@ -113,9 +113,10 @@ export default function ResultsPage() {
   };
 
   const handleCopySummary = () => {
-    if (!submission?.verdict || !submission?.featureTitle) return;
+    if (!submission?.verdict) return;
+    const featureTitle = submission.feature?.title || submission.featureTitle || "Feature";
 
-    const summary = `Feature Validation: ${submission.featureTitle}
+    const summary = `Feature Validation: ${featureTitle}
 
 Verdict: ${submission.verdict.verdict} (${submission.verdict.confidence} confidence)
 
@@ -194,13 +195,13 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
             className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"
             variants={fadeUp}
           >
-            {submission.featureTitle}
+            {submission.feature?.title || submission.featureTitle}
           </motion.h1>
           <motion.p
             className="text-xl text-slate-300 leading-relaxed"
             variants={fadeUp}
           >
-            {submission.featureDescription}
+            {submission.feature?.description || submission.featureDescription}
           </motion.p>
         </motion.div>
 
@@ -217,6 +218,72 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Startup Context Summary */}
+        {submission.startup && (
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            className="mb-8"
+          >
+            <motion.div variants={fadeUp}>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+                <h2 className="text-2xl font-bold text-slate-100 mb-4">Startup Context</h2>
+                <div className="space-y-3 text-slate-300">
+                  <div>
+                    <span className="font-semibold text-slate-200">Name:</span> {submission.startup.name}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-200">Description:</span> {submission.startup.description}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-200">What It Does:</span> {submission.startup.whatItDoes}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-200">Problem Solved:</span> {submission.startup.problemSolved}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-200">Target Audience:</span> {submission.startup.targetAudience}
+                  </div>
+                  {submission.startup.websiteUrl && (
+                    <div>
+                      <span className="font-semibold text-slate-200">Website:</span>{" "}
+                      <a
+                        href={submission.startup.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:text-cyan-300 underline"
+                      >
+                        {submission.startup.websiteUrl}
+                      </a>
+                    </div>
+                  )}
+                  {submission.startup.websiteEvidence && submission.startup.websiteEvidence.pages && submission.startup.websiteEvidence.pages.length > 0 && (
+                    <div>
+                      <span className="font-semibold text-slate-200">Pages Analyzed:</span>
+                      <ul className="mt-1 ml-4 list-disc space-y-1">
+                        {submission.startup.websiteEvidence.pages.map((page, idx) => (
+                          <li key={idx}>
+                            <a
+                              href={page.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-400 hover:text-cyan-300 underline"
+                            >
+                              {page.title || page.url}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
 
         {/* Verdict */}
         {submission.verdict && (
@@ -256,7 +323,11 @@ ${submission.verdict.pivotOptions.length > 0 ? `\nPivot Options:\n${submission.v
 
             {/* Transparency Panel */}
             <motion.div variants={fadeUp}>
-              <TransparencyPanel transparency={submission.verdict.transparency} />
+              <TransparencyPanel 
+                transparency={submission.verdict.transparency}
+                evidence={submission.evidence}
+                startup={submission.startup}
+              />
             </motion.div>
 
             {/* Action Buttons */}

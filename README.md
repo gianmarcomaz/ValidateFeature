@@ -557,6 +557,74 @@ Available in development mode only. Shows:
   - Sprint subcollection
 - ✅ API route health
 
+### Evidence Integration Verification
+
+To verify evidence is working correctly:
+
+1. **Set Environment Variables:**
+   ```bash
+   # Required for evidence gathering
+   GOOGLE_CSE_API_KEY=your_key_here
+   GOOGLE_CSE_CX=your_cx_here
+   ```
+
+2. **Submit a Feature:**
+   - Go to `/new`
+   - Enter a feature like: "Automate resume checking and verification + ATS-friendly enhancement"
+   - Submit the form
+
+3. **Check Evidence Collection:**
+   - In browser console, look for `[Form] Evidence received:` log
+   - In terminal, look for `[Evidence]` logs showing:
+     - `googleConfigured=true/false`
+     - `googleItems=X`
+     - `hnHits=X`
+     - `competitors=X`
+     - `warnings=X`
+
+4. **Verify Results Page (`/s/[id]`):**
+   - **Evidence Metrics section** should show:
+     - Market status (Established/Unclear)
+     - Competitor count
+     - Evidence signals with progress bars
+     - **Inline evidence** under each metric:
+       - Competitor Density: Top 3 competitors with links + snippets
+       - Pain Signal: 2-3 pain indicators from search results
+       - Recency: Recent HN hits with dates
+       - Evidence Coverage: Counts + sample citations
+     - References section with 5-10 citations
+     - Warnings banner if Google CSE not configured
+
+5. **Check Firestore:**
+   - Open Firebase Console → Firestore
+   - Find submission document in `submissions/{id}`
+   - Verify `evidence` field contains:
+     - `google: { configured, queries: [...] }`
+     - `hackernews: { hits: [...] }`
+     - `competitors: [...]`
+     - `signals: { perMetricEvidence: {...} }`
+     - `warnings: [...]` (if applicable)
+
+6. **Verify Verdict Uses Evidence:**
+   - Verdict should reference actual competitors found
+   - If competitors.length >= 3, verdict should acknowledge market is established
+   - If evidenceCoverage < 30, confidence should be LOW/MEDIUM
+   - Competitor Analysis should list real competitors with links
+
+7. **Test Without Google CSE:**
+   - Remove `GOOGLE_CSE_API_KEY` from `.env.local`
+   - Submit a feature
+   - Should see warning banner: "Google CSE not configured"
+   - Evidence should still show HN results
+   - Verdict should note limited evidence
+
+### Debug Mode
+
+To see raw evidence JSON on results page:
+1. Add to `.env.local`: `NEXT_PUBLIC_DEBUG_EVIDENCE=true`
+2. Restart dev server
+3. Results page will show "Debug: Raw Evidence JSON" toggle
+
 ### Manual Testing Checklist
 
 1. **Environment:**
@@ -688,6 +756,169 @@ Available in development mode only. Shows:
 ## License
 
 See LICENSE file for details.
+
+---
+
+## How to Verify
+
+This section covers verification steps for the upgraded app with startup context + feature context validation.
+
+### Website Auto-fill Verification
+
+1. **Test Website Ingestion:**
+   - Go to `/new`
+   - Select "Website Link (Auto-fill)" tab
+   - Enter a startup website URL (e.g., `https://example.com`)
+   - Click "Auto-fill"
+   - Verify form fields populate with extracted data:
+     - Startup name
+     - Description
+     - What it does
+     - Problem solved
+     - Target audience
+   - Verify fields are editable after auto-fill
+
+2. **Check Firestore Document:**
+   - Submit the form
+   - Open Firebase Console → Firestore
+   - Find the submission document
+   - Verify `startup` field contains:
+     - `source: "website"`
+     - `websiteUrl: "https://example.com"`
+     - `name`, `description`, `whatItDoes`, `problemSolved`, `targetAudience`
+     - `websiteEvidence.pages[]` with fetched pages
+     - `websiteEvidence.fetchedAt` timestamp
+
+3. **Test Manual Entry:**
+   - Go to `/new`
+   - Select "Manual" tab
+   - Fill in startup context manually
+   - Submit and verify `startup.source: "manual"` in Firestore
+
+### Startup + Feature Context Verification
+
+1. **Verify Submission Structure:**
+   - After submitting, check Firestore document has:
+     - `startup` object (if provided)
+     - `feature` object with `title`, `description`, `problemSolved`, `targetAudience`
+     - Legacy fields (`featureTitle`, `featureDescription`) for backward compatibility
+
+2. **Verify Evidence Uses Context:**
+   - Check server logs for evidence search queries
+   - Queries should include startup name, target audience, problem solved
+   - Queries should include feature-specific terms
+   - Evidence should be more precise than before
+
+3. **Verify Verdict Uses Context:**
+   - Check verdict reasons reference startup context when available
+   - If startup context incomplete, limitations should mention it
+   - Verdict should not invent startup facts (should say "unknown" if not provided)
+
+### Evaluation Page Verification
+
+1. **Startup Context Panel:**
+   - Navigate to `/s/[id]` for a submission with startup context
+   - Verify "Startup Context" panel appears near top
+   - Verify it shows:
+     - Name, description, what it does, problem solved, target audience
+     - Website URL (if website mode) with clickable link
+     - List of ingested pages (if website mode)
+
+2. **Evidence Links in Reasons:**
+   - Check each reason card
+   - Verify "Evidence used" section shows 2-4 citations
+   - Citations should have:
+     - Clickable links
+     - Source badges (google/hackernews/website)
+     - Snippets (first 150 chars)
+   - If no evidence, verify warning message appears
+
+3. **Enhanced Pivot Options:**
+   - Check pivot options cards
+   - Verify they show (if provided):
+     - Who to target
+     - What to build/change
+     - Week-1 experiment
+     - Success metric
+     - Smallest MVP
+
+4. **Improved Transparency Panel:**
+   - Expand "Sources" section
+   - Verify it shows:
+     - Website evidence pages (if website mode)
+     - Top Google citations (5 max)
+     - Top HN citations (5 max)
+   - Expand "Warnings & Coverage" section (if applicable)
+   - Verify warnings for:
+     - Low evidence coverage (< 30)
+     - Google CSE not configured
+     - Other evidence issues
+   - Expand "Methodology" section
+   - Verify "How metrics are computed" subsection appears
+
+### Backward Compatibility Verification
+
+1. **Old Submissions Still Work:**
+   - Create a submission without startup context (legacy flow)
+   - Verify it still works end-to-end
+   - Results page should handle missing `startup` and `feature` fields gracefully
+   - Should fall back to `featureTitle` and `featureDescription`
+
+2. **Mixed Data:**
+   - Verify app handles submissions with:
+     - Only legacy fields
+     - Only new fields
+     - Both (should prefer new fields)
+
+### Evidence Quality Verification
+
+1. **Check Evidence Citations:**
+   - Verify evidence includes `citations[]` array
+   - Each citation should have: `title`, `url`, `snippet`, `source`
+   - Citations should be from actual search results, not invented
+
+2. **Check Competitor Analysis:**
+   - Verify `competitorAnalysis` in verdict references actual competitors from evidence
+   - Competitor links should be real URLs from search results
+   - Should not include hypothetical competitors
+
+3. **Check Warnings:**
+   - If evidence coverage < 30, verify warning appears
+   - If Google CSE not configured, verify warning appears
+   - Warnings should be explicit, not hidden
+
+### Non-Hallucination Verification
+
+1. **Missing Evidence:**
+   - Submit a feature with no evidence (or very low coverage)
+   - Verify verdict says "unknown" for missing facts
+   - Verify confidence is LOW or MEDIUM (not HIGH)
+   - Verify limitations mention missing evidence
+
+2. **Missing Startup Context:**
+   - Submit without startup context
+   - Verify verdict doesn't invent startup facts
+   - Verify limitations mention incomplete startup context
+
+3. **Competitor Claims:**
+   - If evidence shows 0 competitors, verdict can say "no competitors found"
+   - If evidence shows 3+ competitors, verdict MUST acknowledge them
+   - Verdict should never claim "no competitors" if evidence shows otherwise
+
+### Integration Stability Verification
+
+1. **Existing Flows:**
+   - Verify normalize API still works
+   - Verify verdict API still works
+   - Verify sprint generation still works
+   - Verify Firestore writes succeed
+   - Verify no breaking changes to existing submissions
+
+2. **Error Handling:**
+   - Test with invalid website URL (should show error)
+   - Test with unreachable website (should show warning)
+   - Test with SSRF attempt (localhost, private IP) - should be blocked
+   - Test with missing OpenAI key - should show clear error
 
 ---
 

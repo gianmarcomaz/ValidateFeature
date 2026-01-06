@@ -308,6 +308,86 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
     evidence.hackernews
   );
 
+  // Build perMetricEvidence for inline display
+  const allGoogleItems = evidence.google.queries.flatMap(q => q.items);
+  const topCompetitors = competitors.slice(0, 3).map(c => ({
+    name: c.name,
+    url: c.url,
+    snippet: c.evidenceSnippets[0] || "",
+  }));
+
+  // Find pain indicators from Google snippets and HN
+  const painIndicators: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" }> = [];
+  
+  // From Google: find snippets with pain keywords
+  for (const item of allGoogleItems) {
+    const lowerSnippet = item.snippet.toLowerCase();
+    if (PAIN_INDICATORS.some(indicator => lowerSnippet.includes(indicator)) && painIndicators.length < 3) {
+      painIndicators.push({
+        title: item.title,
+        url: item.link,
+        snippet: item.snippet.substring(0, 200),
+        source: "google",
+      });
+    }
+  }
+  
+  // From HN: high comment stories
+  const highCommentStories = evidence.hackernews.hits
+    .filter(hit => (hit.num_comments || 0) > 10)
+    .slice(0, 2)
+    .map(hit => ({
+      title: hit.title,
+      url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+      snippet: `${hit.num_comments} comments - ${hit.points || 0} points`,
+      source: "hackernews" as const,
+    }));
+  painIndicators.push(...highCommentStories);
+
+  // Recent hits for recency evidence
+  const recentHits = evidence.hackernews.hits
+    .slice(0, 3)
+    .filter(hit => hit.url)
+    .map(hit => ({
+      title: hit.title,
+      url: hit.url!,
+      date: hit.created_at || "Unknown",
+      comments: hit.num_comments,
+    }));
+
+  // Count recent posts (last 90 days approximation)
+  const now = Date.now();
+  const ninetyDaysAgo = now - (90 * 24 * 60 * 60 * 1000);
+  const recentCount = evidence.hackernews.hits.filter(hit => {
+    if (!hit.created_at) return false;
+    try {
+      const hitDate = new Date(hit.created_at).getTime();
+      return hitDate > ninetyDaysAgo;
+    } catch {
+      return false;
+    }
+  }).length;
+  const recencySummary = `${recentCount} of ${evidence.hackernews.hits.length} posts in last 90 days`;
+
+  // Evidence coverage details
+  const pricingPages = allGoogleItems.filter(item => 
+    item.link.toLowerCase().includes("pricing") || 
+    item.title.toLowerCase().includes("pricing")
+  ).length;
+
+  const sampleCitations = [
+    ...allGoogleItems.slice(0, 2).map(item => ({
+      title: item.title,
+      url: item.link,
+      source: "google" as const,
+    })),
+    ...evidence.hackernews.hits.slice(0, 1).filter(hit => hit.url).map(hit => ({
+      title: hit.title,
+      url: hit.url!,
+      source: "hackernews" as const,
+    })),
+  ];
+
   return {
     competitor_density: competitorDensity,
     recency_score: recencyScore,
@@ -316,6 +396,27 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
     evidenceCoverage,
     marketEstablished,
     notes,
+    perMetricEvidence: {
+      competitorDensity: {
+        competitors: topCompetitors,
+      },
+      painSignal: {
+        indicators: painIndicators.slice(0, 3),
+      },
+      recency: {
+        recentHits: recentHits.slice(0, 3),
+        summary: recencySummary,
+      },
+      evidenceCoverage: {
+        counts: {
+          google: allGoogleItems.length,
+          hn: evidence.hackernews.hits.length,
+          competitors: competitors.length,
+          pricingPages,
+        },
+        sampleCitations: sampleCitations.slice(0, 2),
+      },
+    },
   };
 }
 

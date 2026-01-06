@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { EvidenceQueryInput, NormalizedEvidence } from "@/lib/evidence/types";
-import { searchGoogleCse, googleSearch } from "@/lib/evidence/googleCse";
+import { searchGoogleCse } from "@/lib/evidence/googleCse";
 import { searchHackerNews } from "@/lib/evidence/hackerNews";
 import { normalizeEvidence, generateCompetitorSummary } from "@/lib/evidence/normalize";
 import { computeSignals } from "@/lib/evidence/signals";
@@ -13,6 +13,18 @@ import { extractCompetitorsFromGoogle } from "@/lib/evidence/competitors";
 const EvidenceSearchRequestSchema = z.object({
   query: z.string().min(1),
   keywords: z.array(z.string()).optional(),
+  startup: z.object({
+    name: z.string().optional(),
+    targetAudience: z.string().optional(),
+    problemSolved: z.string().optional(),
+    websiteUrl: z.string().optional(),
+  }).optional(),
+  feature: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    problemSolved: z.string().optional(),
+    targetAudience: z.string().optional(),
+  }).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -55,19 +67,27 @@ export async function POST(request: NextRequest) {
     const searchQueries = buildSearchQueries({
       query: validatedBody.query,
       keywords,
+      startup: validatedBody.startup,
+      feature: validatedBody.feature,
     });
 
-    // Fetch evidence from both sources
-    // Google: Execute queries sequentially with delays
-    const googleResults: Awaited<ReturnType<typeof searchGoogleCse>> = [];
-    for (const query of searchQueries) {
-      const result = await googleSearch(query);
-      googleResults.push(result);
-      // Small delay between requests
-      if (searchQueries.indexOf(query) < searchQueries.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 250));
-      }
+    if (searchQueries.length === 0) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "NO_QUERIES",
+            message: "Could not generate search queries from input",
+          },
+        },
+        { status: 400 }
+      );
     }
+
+    // Fetch evidence from both sources
+    // Google: Execute searches using searchGoogleCse helper
+    const googleSearchResult = await searchGoogleCse(searchQueries);
+    const googleResults = googleSearchResult.results;
+    const googleConfigured = googleSearchResult.configured;
 
     // Hacker News: Fetch
     let hnResults: Awaited<ReturnType<typeof searchHackerNews>> = [];
@@ -83,34 +103,71 @@ export async function POST(request: NextRequest) {
     const competitors = extractCompetitorsFromGoogle(googleResults);
     const competitorSummary = generateCompetitorSummary(competitors);
 
-    // Log evidence for debugging
+    // Build warnings array
+    const warnings: NormalizedEvidence["warnings"] = [];
+    
+    if (!googleConfigured) {
+      warnings.push({
+        type: "missing_config",
+        message: "Google CSE not configured",
+        details: "Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX in .env.local to enable Google search results",
+      });
+    }
+    
+    if (googleSearchResult.errors.length > 0) {
+      const errorTypes = new Set(googleSearchResult.errors.map(e => e.error?.type));
+      if (errorTypes.has("rate_limit")) {
+        warnings.push({
+          type: "api_error",
+          message: "Google CSE rate limit reached",
+          details: "Some queries were skipped due to rate limiting",
+        });
+      } else if (errorTypes.has("auth_error")) {
+        warnings.push({
+          type: "api_error",
+          message: "Google CSE authentication failed",
+          details: "Check your API key and quota",
+        });
+      }
+    }
+    
     const googleItemCount = googleResults.reduce((sum, q) => sum + q.items.length, 0);
-    console.log(`[Evidence] Google results: ${googleItemCount} items, HN results: ${hnResults.length} hits, Competitors: ${competitors.length}`);
+    if (googleConfigured && googleItemCount === 0) {
+      warnings.push({
+        type: "no_results",
+        message: "No Google search results found",
+        details: "Try adjusting search queries or check if queries are too specific",
+      });
+    }
+    
+    // Log evidence for debugging (structured, no secrets)
+    console.log(`[Evidence] googleConfigured=${googleConfigured}, googleItems=${googleItemCount}, hnHits=${hnResults.length}, competitors=${competitors.length}, warnings=${warnings.length}`);
 
     // Normalize evidence (includes competitors now)
     const normalized = normalizeEvidence(googleResults, hnResults, competitors);
 
-    // Add competitors and summary to normalized evidence
+    // Add competitors and summary to normalized evidence with Google config status
     const evidenceWithCompetitors = {
       ...normalized,
+      google: {
+        ...normalized.google,
+        configured: googleConfigured,
+      },
       competitors,
       competitorSummary,
     };
 
-    // Compute signals (now includes competitor-aware logic)
+    // Compute signals (now includes competitor-aware logic + perMetricEvidence)
     const signals = computeSignals(evidenceWithCompetitors);
     
-    console.log(`[Evidence] Signals computed:`, {
-      competitor_density: signals.competitor_density,
-      evidenceCoverage: signals.evidenceCoverage,
-      marketEstablished: signals.marketEstablished,
-      competitorCount: competitors.length,
-    });
+    // Structured logging (counts only, no secrets)
+    console.log(`[Evidence] Signals: competitorDensity=${Math.round(signals.competitor_density)}, evidenceCoverage=${Math.round(signals.evidenceCoverage)}, marketEstablished=${signals.marketEstablished}`);
 
     // Combine into full evidence object
     const evidence: NormalizedEvidence = {
       ...evidenceWithCompetitors,
       signals,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     return NextResponse.json({ evidence });

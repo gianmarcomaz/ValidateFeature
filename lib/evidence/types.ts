@@ -45,6 +45,7 @@ export interface CompetitorSummary {
 
 export interface NormalizedEvidence {
   google: {
+    configured: boolean;
     queries: GoogleCseQueryResult[];
   };
   hackernews: {
@@ -60,11 +61,34 @@ export interface NormalizedEvidence {
     evidenceCoverage: number; // 0-100
     marketEstablished: boolean;
     notes: string[];
+    perMetricEvidence?: {
+      competitorDensity: {
+        competitors: Array<{ name: string; url: string; snippet: string }>;
+      };
+      painSignal: {
+        indicators: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" }>;
+      };
+      recency: {
+        recentHits: Array<{ title: string; url: string; date: string; comments?: number }>;
+        summary: string;
+      };
+      evidenceCoverage: {
+        counts: { google: number; hn: number; competitors: number; pricingPages: number };
+        sampleCitations: Array<{ title: string; url: string; source: "google" | "hackernews" }>;
+      };
+    };
   };
   citations: Array<{
     source: "google" | "hackernews";
     title: string;
     url: string;
+    snippet?: string;
+    date?: string;
+  }>;
+  warnings?: Array<{
+    type: "missing_config" | "api_error" | "no_results" | "low_coverage";
+    message: string;
+    details?: string;
   }>;
   generatedAt: string; // ISO timestamp
 }

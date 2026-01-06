@@ -43,12 +43,35 @@ export default function NewFeaturePage() {
       // Fetch evidence from external sources
       let evidence = null;
       try {
+        // Build query using startup + feature context
+        const queryParts: string[] = [];
+        if (data.startup?.name && data.startup.name !== "unknown") {
+          queryParts.push(data.startup.name);
+        }
+        queryParts.push(data.feature.title);
+        if (data.feature.description) {
+          queryParts.push(data.feature.description);
+        }
+        const query = queryParts.join(" ");
+
         const evidenceRes = await fetch("/api/evidence/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            query: `${data.feature.title} ${data.feature.description}`,
+            query,
             keywords: normalized.keywordQuerySet?.slice(0, 8), // Use top keywords from normalized
+            startup: data.startup ? {
+              name: data.startup.name,
+              targetAudience: data.startup.targetAudience,
+              problemSolved: data.startup.problemSolved,
+              websiteUrl: data.startup.websiteUrl,
+            } : undefined,
+            feature: {
+              title: data.feature.title,
+              description: data.feature.description,
+              problemSolved: data.feature.problemSolved,
+              targetAudience: data.feature.targetAudience,
+            },
           }),
         });
 
