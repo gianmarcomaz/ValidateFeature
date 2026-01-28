@@ -2,164 +2,236 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useMotionConfig, staggerContainer } from "@/lib/motion";
-import GlobeHero from "@/components/GlobeHero";
+import { useMotionConfig } from "@/lib/motion";
 
 export default function Home() {
-  const { reduceMotion, transition, fadeUp, staggerContainer: stagger } = useMotionConfig();
+  const { reduceMotion, fadeUp, staggerContainer: stagger } = useMotionConfig();
 
   return (
-    <main className="relative overflow-hidden">
-      <GlobeHero />
-      <div className="mx-auto max-w-6xl px-6 py-16 relative z-0">
+    <main className="relative min-h-screen">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-navy-900 via-navy-800 to-navy-900" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(45,212,191,0.08)_0%,_transparent_50%)]" />
+
+      <div className="relative mx-auto max-w-6xl px-6">
         {/* Hero Section */}
-        <motion.div
-          className="text-center mb-20"
+        <motion.section
+          className="pt-32 pb-24 text-center"
           variants={stagger}
           initial="hidden"
           animate="visible"
         >
-          <motion.div
-            className="inline-block mb-6"
-            variants={fadeUp}
-          >
-            <span className="px-4 py-2 bg-white/10 text-slate-200 rounded-full text-sm font-semibold border border-white/20">
-              AI-Powered Feature Validation
-            </span>
-          </motion.div>
-          
-          <motion.h1
-            className="text-6xl md:text-7xl font-extrabold mb-6 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent leading-tight"
-            variants={fadeUp}
-          >
-            Validate your next feature in minutes
-          </motion.h1>
-          
           <motion.p
-            className="text-xl md:text-2xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed"
+            className="text-accent font-medium mb-4 tracking-wide uppercase text-sm"
             variants={fadeUp}
           >
-            Get instant verdicts on feature ideas with transparent evidence, 
-            pivot suggestions, and actionable validation sprint plans.
+            Feature Validation Platform
           </motion.p>
-          
-          <motion.div variants={fadeUp}>
-            <Link
-              href="/new"
-              className="group relative inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:shadow-xl hover:shadow-fuchsia-500/25 transition-all duration-200 ease-out active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-fuchsia-400/60 focus-visible:ring-offset-0 overflow-hidden"
-            >
-              <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              <span className="relative">Validate a Feature</span>
+
+          <motion.h1
+            className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight"
+            variants={fadeUp}
+          >
+            Validate your ideas<br />
+            <span className="text-slate-400">before you build</span>
+          </motion.h1>
+
+          <motion.p
+            className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed"
+            variants={fadeUp}
+          >
+            Get instant verdicts backed by real market evidence.
+            Stop wasting time on features nobody wants.
+          </motion.p>
+
+          <motion.div
+            className="flex items-center justify-center gap-4"
+            variants={fadeUp}
+          >
+            <Link href="/new" className="btn-primary text-base px-8 py-4">
+              Start Validating
+            </Link>
+            <Link href="#how-it-works" className="btn-secondary text-base px-8 py-4">
+              Learn More
             </Link>
           </motion.div>
-        </motion.div>
+        </motion.section>
 
-        {/* Features Grid */}
-        <motion.div
-          className="grid md:grid-cols-3 gap-8 mt-24"
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
+        {/* How It Works Section */}
+        <motion.section
+          id="how-it-works"
+          className="py-24"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
         >
-          {/* Card 1 - Instant Verdict */}
-          <motion.div
-            className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-200 ease-out"
-            variants={fadeUp}
-            whileHover={reduceMotion ? {} : { y: -2 }}
-          >
-            <div className="h-10 w-10 mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-              <svg
-                className="h-5 w-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-100 mb-3">
-              Instant Verdict
-            </h3>
-            <p className="text-slate-300 leading-relaxed">
-              Get a clear BUILD, RISKY, or DON'T BUILD recommendation 
-              with confidence levels and detailed reasoning.
-            </p>
-          </motion.div>
+          <div className="text-center mb-16">
+            <p className="text-accent font-medium mb-3 text-sm uppercase tracking-wide">How It Works</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-white">
+              Three steps to clarity
+            </h2>
+          </div>
 
-          {/* Card 2 - Transparent Evidence */}
-          <motion.div
-            className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-200 ease-out"
-            variants={fadeUp}
-            whileHover={reduceMotion ? {} : { y: -2 }}
-          >
-            <div className="h-10 w-10 mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
-              <svg
-                className="h-5 w-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-100 mb-3">
-              Transparent Evidence
-            </h3>
-            <p className="text-slate-300 leading-relaxed">
-              See exactly how decisions are made with detailed methodology, 
-              assumptions, and limitations clearly disclosed.
-            </p>
-          </motion.div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <motion.div
+              className="card"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold mb-5">
+                1
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                Describe your feature
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Tell us about the feature you want to build and who you're building it for.
+              </p>
+            </motion.div>
 
-          {/* Card 3 - Validation Sprint Plan */}
-          <motion.div
-            className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur hover:bg-white/10 hover:border-white/20 transition-all duration-200 ease-out"
-            variants={fadeUp}
-            whileHover={reduceMotion ? {} : { y: -2 }}
-          >
-            <div className="h-10 w-10 mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-pink-600">
-              <svg
-                className="h-5 w-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+            {/* Step 2 */}
+            <motion.div
+              className="card"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold mb-5">
+                2
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                We gather evidence
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Our AI analyzes market signals, competitors, and user pain points from real data.
+              </p>
+            </motion.div>
+
+            {/* Step 3 */}
+            <motion.div
+              className="card"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold mb-5">
+                3
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                Get your verdict
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Receive a clear recommendation with transparent reasoning and next steps.
+              </p>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* Features Section */}
+        <motion.section
+          className="py-24 border-t border-slate-800"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <p className="text-accent font-medium mb-3 text-sm uppercase tracking-wide">Evidence-Based</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+                Decisions backed by data, not guesswork
+              </h2>
+              <p className="text-slate-400 leading-relaxed mb-8">
+                Every verdict comes with transparent evidence and methodology.
+                See exactly what signals we found and how they influenced the recommendation.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-3 h-3 text-teal" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-slate-300">Competitor analysis from real market data</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-3 h-3 text-teal" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-slate-300">Community sentiment from forums and discussions</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-3 h-3 text-teal" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="text-slate-300">Clear methodology and assumptions disclosed</span>
+                </div>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-slate-100 mb-3">
-              Validation Sprint Plan
-            </h3>
-            <p className="text-slate-300 leading-relaxed">
-              Get ready-to-run validation tests, survey questions, 
-              and outreach templates to increase confidence.
-            </p>
-          </motion.div>
-        </motion.div>
+
+            <div className="card p-8">
+              <div className="space-y-5">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">Market Demand</span>
+                    <span className="text-white font-medium">78%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: '78%' }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">Competition Level</span>
+                    <span className="text-white font-medium">45%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: '45%' }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">Pain Signal Strength</span>
+                    <span className="text-white font-medium">82%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: '82%' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* CTA Section */}
+        <motion.section
+          className="py-24 text-center"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Ready to validate your next idea?
+          </h2>
+          <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+            Stop building features that fail. Get evidence-backed verdicts in minutes.
+          </p>
+          <Link href="/new" className="btn-primary text-lg px-10 py-5">
+            Get Started Free
+          </Link>
+        </motion.section>
       </div>
     </main>
   );
 }
-

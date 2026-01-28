@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchHackerNews } from "@/lib/evidence/hackerNews";
-import { searchGoogleCse } from "@/lib/evidence/googleCse";
+import { searchGoogleCse, getLastGoogleCseDiagnostics } from "@/lib/evidence/googleCse";
+import { logRuntimeEnvDiagnosticsOnce } from "@/lib/config/env";
 
 /**
  * Test endpoint to verify evidence APIs are working
  * GET /api/test-evidence
  */
 export async function GET(request: NextRequest) {
+  // One-time, safe runtime diagnostics for Firebase + Google project wiring
+  logRuntimeEnvDiagnosticsOnce("/api/test-evidence");
+
   const results: any = {
     timestamp: new Date().toISOString(),
     hackerNews: {
@@ -16,7 +20,7 @@ export async function GET(request: NextRequest) {
       error: null,
     },
     googleCse: {
-      configured: !!(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_CX),
+      configured: !!process.env.SERPER_API_KEY,
       status: "testing",
       results: [],
       error: null,
@@ -44,17 +48,30 @@ export async function GET(request: NextRequest) {
   // Test Google CSE (REQUIRES API KEYS)
   if (results.googleCse.configured) {
     try {
-      console.log("[Test] Testing Google CSE API...");
+      console.log("[Test] Testing Serper.dev search API...");
       const googleResult = await searchGoogleCse(["startup software tool"]);
-      results.googleCse.status = "success";
-      results.googleCse.results = googleResult.results.flatMap(r => r.items).slice(0, 3).map(item => ({
-        title: item.title,
-        url: item.link,
-        snippet: item.snippet.substring(0, 100),
-      }));
-      results.googleCse.message = `Found ${googleResult.results.reduce((sum, r) => sum + r.items.length, 0)} items (showing first 3)`;
+      const flatItems = googleResult.results.flatMap(r => r.items);
+      const totalItems = flatItems.length;
+
+      // Attach diagnostics from the last CSE call (non-secret)
+      results.googleCse.debug = getLastGoogleCseDiagnostics();
+
       if (googleResult.errors.length > 0) {
+        const firstError = googleResult.errors[0].error;
+        const statusCode = firstError.statusCode;
+        results.googleCse.status = statusCode === 403 ? "blocked" : "error";
+        results.googleCse.error = firstError.message;
         results.googleCse.warnings = googleResult.errors.map(e => e.error.message);
+        results.googleCse.message = `Google CSE returned 0 items due to error (statusCode=${statusCode ?? "n/a"})`;
+        results.googleCse.results = [];
+      } else {
+        results.googleCse.status = "success";
+        results.googleCse.results = flatItems.slice(0, 3).map(item => ({
+          title: item.title,
+          url: item.link,
+          snippet: item.snippet.substring(0, 100),
+        }));
+        results.googleCse.message = `Found ${totalItems} items (showing first 3)`;
       }
     } catch (err: any) {
       results.googleCse.status = "error";
@@ -63,8 +80,9 @@ export async function GET(request: NextRequest) {
     }
   } else {
     results.googleCse.status = "not_configured";
-    results.googleCse.message = "GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX not set in environment";
-    results.googleCse.instructions = "To enable Google CSE:\n1. Go to https://console.cloud.google.com/\n2. Create a project (or use existing)\n3. Enable 'Custom Search API'\n4. Create credentials (API Key)\n5. Go to https://programmablesearchengine.google.com/\n6. Create a Custom Search Engine\n7. Get the Search Engine ID (CX)\n8. Add both to .env.local";
+      results.googleCse.message = "SERPER_API_KEY not set in environment";
+      results.googleCse.instructions =
+        "To enable Serper.dev search:\n1. Go to https://serper.dev\n2. Sign up and create an API key\n3. Add SERPER_API_KEY to .env.local\n4. Restart the Next.js dev server.";
   }
 
   return NextResponse.json(results, {

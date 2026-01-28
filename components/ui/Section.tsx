@@ -1,16 +1,15 @@
-import React from "react";
+import { ReactNode } from "react";
 
 interface SectionProps {
   title?: string;
-  children: React.ReactNode;
-  className?: string;
+  children: ReactNode;
 }
 
-export function Section({ title, children, className = "" }: SectionProps) {
+export function Section({ title, children }: SectionProps) {
   return (
-    <section className={`mb-8 ${className}`}>
+    <section className="mb-10">
       {title && (
-        <h2 className="text-xl font-semibold text-slate-100 mb-4">
+        <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           {title}
         </h2>
       )}
@@ -18,4 +17,3 @@ export function Section({ title, children, className = "" }: SectionProps) {
     </section>
   );
 }
-

@@ -1,20 +1,23 @@
-import React from "react";
+import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface CardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   hover?: boolean;
+  variant?: "default" | "elevated";
 }
 
-export function Card({ children, className = "", hover = false }: CardProps) {
+export function Card({ children, className, hover = false, variant = "default" }: CardProps) {
   return (
     <div
-      className={`
-        group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur
-        transition-all duration-200 ease-out
-        ${hover ? "hover:bg-white/10 hover:border-white/20" : ""}
-        ${className}
-      `}
+      className={cn(
+        "rounded-2xl p-6",
+        variant === "default" && "bg-navy-800/80 border border-slate-700/50",
+        variant === "elevated" && "bg-navy-700/80 border border-slate-600/50",
+        hover && "transition-all duration-300 hover:border-slate-600 hover:-translate-y-0.5",
+        className
+      )}
     >
       {children}
     </div>
@@ -22,41 +25,40 @@ export function Card({ children, className = "", hover = false }: CardProps) {
 }
 
 interface CardHeaderProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
-export function CardHeader({ children, className = "" }: CardHeaderProps) {
+export function CardHeader({ children, className }: CardHeaderProps) {
   return (
-    <div className={`mb-4 ${className}`}>
+    <div className={cn("pb-4", className)}>
       {children}
     </div>
   );
 }
 
 interface CardTitleProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
-export function CardTitle({ children, className = "" }: CardTitleProps) {
+export function CardTitle({ children, className }: CardTitleProps) {
   return (
-    <h3 className={`text-lg font-semibold text-slate-100 ${className}`}>
+    <h3 className={cn("text-lg font-semibold text-white", className)}>
       {children}
     </h3>
   );
 }
 
 interface CardContentProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
-export function CardContent({ children, className = "" }: CardContentProps) {
+export function CardContent({ children, className }: CardContentProps) {
   return (
-    <div className={`text-slate-300 ${className}`}>
+    <div className={cn(className)}>
       {children}
     </div>
   );
 }
-

@@ -1,69 +1,96 @@
 "use client";
 
-import { ValidationSprint } from "@/lib/domain/types";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
 
+interface ValidationTest {
+  type: "fake-door" | "micro-poll" | "waitlist" | "interview";
+  steps: string[];
+  successThreshold: string;
+}
+
+interface SurveyQuestion {
+  question: string;
+  type: "text" | "multiple-choice" | "scale" | "boolean";
+  options?: string[];
+  required: boolean;
+}
+
+interface OutreachTemplate {
+  platform: "linkedin" | "email";
+  subject?: string;
+  body: string;
+}
+
 interface SprintPlanViewProps {
-  sprint: ValidationSprint;
+  sprint: {
+    tests: ValidationTest[];
+    survey: {
+      questions: SurveyQuestion[];
+      intro: string;
+    };
+    outreachTemplates: OutreachTemplate[];
+  };
 }
 
 export function SprintPlanView({ sprint }: SprintPlanViewProps) {
+  const testTypeLabels = {
+    "fake-door": "Fake Door Test",
+    "micro-poll": "Micro Poll",
+    "waitlist": "Waitlist Landing",
+    "interview": "User Interview",
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Tests */}
+    <div className="space-y-8">
+      {/* Validation Tests */}
       <Section title="Validation Tests">
         <div className="space-y-4">
           {sprint.tests.map((test, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <CardTitle className="capitalize">{test.type.replace("-", " ")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-200 mb-2">Steps:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-sm text-slate-300">
-                    {test.steps.map((step, stepIndex) => (
-                      <li key={stepIndex}>{step}</li>
-                    ))}
-                  </ol>
+            <Card key={index} className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-bold">
+                  {index + 1}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-200 mb-1">Success Threshold:</p>
-                  <p className="text-sm text-cyan-400">{test.successThreshold}</p>
+                  <h4 className="font-medium text-white">{testTypeLabels[test.type]}</h4>
+                  <p className="text-xs text-slate-500">Success: {test.successThreshold}</p>
                 </div>
-              </CardContent>
+              </div>
+
+              <ol className="space-y-2 pl-11">
+                {test.steps.map((step, stepIdx) => (
+                  <li key={stepIdx} className="text-sm text-slate-400 flex items-start gap-2">
+                    <span className="text-slate-600">{stepIdx + 1}.</span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
             </Card>
           ))}
         </div>
       </Section>
 
-      {/* Survey */}
-      <Section title="Survey">
+      {/* Survey Questions */}
+      <Section title="Survey Questions">
         <Card>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-slate-200 mb-2">Introduction:</p>
-              <p className="text-sm text-slate-300">{sprint.survey.intro}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-200 mb-2">Questions:</p>
-              <ol className="list-decimal list-inside space-y-3 text-sm text-slate-300">
-                {sprint.survey.questions.map((question, index) => (
-                  <li key={index}>
-                    <span className="font-medium">{question.question}</span>
-                    {question.options && question.options.length > 0 && (
-                      <ul className="list-disc list-inside ml-4 mt-1 text-slate-400">
-                        {question.options.map((option, optIndex) => (
-                          <li key={optIndex}>{option}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </CardContent>
+          <p className="text-sm text-slate-400 mb-4 italic">{sprint.survey.intro}</p>
+          <div className="space-y-3">
+            {sprint.survey.questions.map((q, index) => (
+              <div key={index} className="p-3 bg-navy-900 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="text-xs text-slate-600 mt-0.5">{index + 1}.</span>
+                  <div className="flex-1">
+                    <p className="text-sm text-white">{q.question}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-slate-500 capitalize">{q.type}</span>
+                      {q.required && <span className="text-xs text-accent">Required</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       </Section>
 
@@ -72,19 +99,17 @@ export function SprintPlanView({ sprint }: SprintPlanViewProps) {
         <div className="space-y-4">
           {sprint.outreachTemplates.map((template, index) => (
             <Card key={index}>
-              <CardHeader>
-                <CardTitle className="capitalize">{template.platform}</CardTitle>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-0.5 text-xs rounded-full bg-slate-700 text-slate-300 capitalize">
+                  {template.platform}
+                </span>
                 {template.subject && (
-                  <p className="text-sm text-slate-300 mt-2">
-                    <span className="font-medium">Subject:</span> {template.subject}
-                  </p>
+                  <span className="text-sm text-slate-400">"{template.subject}"</span>
                 )}
-              </CardHeader>
-              <CardContent>
-                <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">
-                  {template.body}
-                </pre>
-              </CardContent>
+              </div>
+              <div className="p-3 bg-navy-900 rounded-lg">
+                <pre className="text-sm text-slate-300 whitespace-pre-wrap font-sans">{template.body}</pre>
+              </div>
             </Card>
           ))}
         </div>
@@ -92,4 +117,3 @@ export function SprintPlanView({ sprint }: SprintPlanViewProps) {
     </div>
   );
 }
-

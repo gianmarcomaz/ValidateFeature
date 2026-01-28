@@ -1,4 +1,4 @@
-# FeatureValidate
+# Validate
 
 AI-powered feature validation tool that helps founders validate feature ideas with instant verdicts (Build/Risky/Don't Build), transparent evidence, pivot suggestions, and actionable validation sprint plans.
 
@@ -162,21 +162,19 @@ Create `.env.local` in the root directory:
 # OpenAI API Key (Server-side only - never exposed to client)
 OPENAI_API_KEY=sk-...
 
-# Firebase Configuration (Client-side - prefixed with NEXT_PUBLIC_)
+# Firebase Configuration (Client-side - prefixed with NEXT_PUBLIC_ for validatefeature)
 NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 
-# Google Custom Search Engine (Optional - for evidence gathering)
-GOOGLE_CSE_API_KEY=...
-GOOGLE_CSE_CX=...
+# Serper.dev Search (Optional - for evidence gathering)
+SERPER_API_KEY=...
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
 
-# Google Custom Search Engine (Optional - for evidence gathering)
-GOOGLE_CSE_API_KEY=...
-GOOGLE_CSE_CX=...
+# Serper.dev Search (Optional - for evidence gathering)
+SERPER_API_KEY=...
 ```
 
 **⚠️ Important:** Never commit `.env.local` to Git! It's already in `.gitignore`.
@@ -191,7 +189,7 @@ GOOGLE_CSE_CX=...
 4. Copy the key (you won't see it again!)
 5. Paste into `OPENAI_API_KEY` in `.env.local`
 
-#### Firebase Configuration
+#### Firebase Configuration (validatefeature)
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Create a new project (or select existing)
@@ -200,23 +198,14 @@ GOOGLE_CSE_CX=...
 5. Register app if not already done
 6. Copy the config object values to `.env.local`
 
-#### Google Custom Search Engine (Optional)
+#### Serper.dev Search (Optional)
 
-**Note:** Evidence gathering works without Google CSE, but verdicts will note that external evidence was not available.
+**Note:** Evidence gathering works without Serper.dev, but verdicts will note that external evidence was not available.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the "Custom Search API" in "APIs & Services" > "Library"
-4. Create an API Key in "APIs & Services" > "Credentials"
-   - Restrict the key to "Custom Search API" for security
-5. Go to [Programmable Search Engine](https://programmablesearchengine.google.com/)
-6. Click "Add" to create a new search engine
-   - Set "Sites to search" to "Search the entire web"
-   - Give it a name
-7. Copy the Search Engine ID (CX) from the control panel
-8. Add both `GOOGLE_CSE_API_KEY` and `GOOGLE_CSE_CX` to `.env.local`
-
-**Free Tier:** 100 search queries per day
+1. Go to [Serper.dev](https://serper.dev)
+2. Sign up or log in
+3. Create an API key from the dashboard
+4. Add `SERPER_API_KEY` to `.env.local`
 
 ---
 
@@ -571,8 +560,7 @@ To verify evidence is working correctly:
 1. **Set Environment Variables:**
    ```bash
    # Required for evidence gathering
-   GOOGLE_CSE_API_KEY=your_key_here
-   GOOGLE_CSE_CX=your_cx_here
+   SERPER_API_KEY=your_key_here
    ```
 
 2. **Submit a Feature:**
@@ -618,10 +606,10 @@ To verify evidence is working correctly:
    - If evidenceCoverage < 30, confidence should be LOW/MEDIUM
    - Competitor Analysis should list real competitors with links
 
-7. **Test Without Google CSE:**
-   - Remove `GOOGLE_CSE_API_KEY` from `.env.local`
+7. **Test Without Serper.dev:**
+   - Remove `SERPER_API_KEY` from `.env.local`
    - Submit a feature
-   - Should see warning banner: "Google CSE not configured"
+   - Should see warning banner that external search is not configured
    - Evidence should still show HN results
    - Verdict should note limited evidence
 

@@ -1,89 +1,89 @@
-import React from "react";
-import { Verdict, Confidence } from "@/lib/domain/types";
+import { cn } from "@/lib/utils";
 
 interface BadgeProps {
-  verdict?: Verdict;
-  confidence?: Confidence;
-  children?: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "danger" | "neutral";
+  children: React.ReactNode;
+  variant?: "success" | "warning" | "danger" | "neutral";
   size?: "sm" | "md" | "lg";
+  className?: string;
 }
 
-export function Badge({ 
-  verdict, 
-  confidence, 
-  children, 
-  variant,
-  size = "md" 
-}: BadgeProps) {
-  let bgColor = "bg-gray-100 text-gray-800";
-  let textColor = "text-gray-800";
-  
-  if (verdict) {
-    switch (verdict) {
-      case "BUILD":
-        bgColor = "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-green-400/50";
-        textColor = "text-white";
-        break;
-      case "RISKY":
-        bgColor = "bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-2 border-yellow-300/50";
-        textColor = "text-white";
-        break;
-      case "DONT_BUILD":
-        bgColor = "bg-gradient-to-r from-red-500 to-rose-600 text-white border-2 border-red-400/50";
-        textColor = "text-white";
-        break;
-    }
-  } else if (variant) {
-    switch (variant) {
-      case "success":
-        bgColor = "bg-green-100 text-green-800";
-        textColor = "text-green-800";
-        break;
-      case "warning":
-        bgColor = "bg-yellow-100 text-yellow-800";
-        textColor = "text-yellow-800";
-        break;
-      case "danger":
-        bgColor = "bg-red-100 text-red-800";
-        textColor = "text-red-800";
-        break;
-      case "neutral":
-        bgColor = "bg-gray-100 text-gray-800";
-        textColor = "text-gray-800";
-        break;
-    }
-  }
-
-  const sizeClasses = {
-    sm: "px-3 py-1.5 text-xs",
-    md: "px-4 py-2 text-sm",
-    lg: "px-6 py-3 text-lg font-bold shadow-lg",
+export function Badge({ children, variant = "neutral", size = "md", className }: BadgeProps) {
+  const variantStyles = {
+    success: "bg-teal/15 text-teal border-teal/30",
+    warning: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    danger: "bg-red-500/15 text-red-400 border-red-500/30",
+    neutral: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   };
 
-  const displayText = verdict ? verdict.replace("_", " ") : (children || "");
-  const confidenceBadge = confidence && verdict && (
-    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${getConfidenceColor(confidence)}`}>
-      {confidence}
-    </span>
-  );
+  const sizeStyles = {
+    sm: "text-xs px-2 py-0.5",
+    md: "text-sm px-3 py-1",
+    lg: "text-base px-4 py-2 font-semibold",
+  };
 
   return (
-    <span className={`inline-flex items-center rounded-full font-medium ${bgColor} ${sizeClasses[size]} transition-all duration-300`}>
-      {displayText}
-      {confidenceBadge}
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border",
+        variantStyles[variant],
+        sizeStyles[size],
+        className
+      )}
+    >
+      {children}
     </span>
   );
 }
 
-function getConfidenceColor(confidence: Confidence): string {
-  switch (confidence) {
-    case "HIGH":
-      return "bg-green-100/90 text-green-800 font-semibold";
-    case "MEDIUM":
-      return "bg-yellow-100/90 text-yellow-800 font-semibold";
-    case "LOW":
-      return "bg-red-100/90 text-red-800 font-semibold";
-  }
+// Verdict-specific badge component
+interface VerdictBadgeProps {
+  verdict: "BUILD" | "RISKY" | "DONT_BUILD";
+  className?: string;
 }
 
+export function VerdictBadge({ verdict, className }: VerdictBadgeProps) {
+  const config = {
+    BUILD: {
+      label: "Build It",
+      variant: "success" as const,
+    },
+    RISKY: {
+      label: "Risky",
+      variant: "warning" as const,
+    },
+    DONT_BUILD: {
+      label: "Don't Build",
+      variant: "danger" as const,
+    },
+  };
+
+  const { label, variant } = config[verdict];
+
+  return (
+    <Badge variant={variant} size="lg" className={className}>
+      {label}
+    </Badge>
+  );
+}
+
+// Confidence badge
+interface ConfidenceBadgeProps {
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  className?: string;
+}
+
+export function ConfidenceBadge({ confidence, className }: ConfidenceBadgeProps) {
+  const config = {
+    HIGH: { label: "High Confidence", variant: "success" as const },
+    MEDIUM: { label: "Medium Confidence", variant: "warning" as const },
+    LOW: { label: "Low Confidence", variant: "danger" as const },
+  };
+
+  const { label, variant } = config[confidence];
+
+  return (
+    <Badge variant={variant} size="sm" className={className}>
+      {label}
+    </Badge>
+  );
+}

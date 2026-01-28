@@ -1,64 +1,47 @@
 "use client";
 
-import { PivotOption } from "@/lib/domain/types";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
+
+interface PivotOption {
+  name: string;
+  description: string;
+  whyStronger: string;
+  smallestMVP: string;
+}
 
 interface PivotOptionsProps {
   options: PivotOption[];
 }
 
 export function PivotOptions({ options }: PivotOptionsProps) {
+  if (!options || options.length === 0) {
+    return null;
+  }
+
   return (
-    <Section title="Refine & Pivot Options">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <Section title="Alternative Approaches">
+      <div className="space-y-4">
         {options.map((option, index) => (
-          <Card key={index} hover>
-            <CardHeader>
-              <CardTitle>{option.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <Card key={index} hover className="space-y-4">
+            <div>
+              <h4 className="font-semibold text-white mb-2">{option.name}</h4>
+              <p className="text-sm text-slate-400">{option.description}</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-slate-200 mb-1">Description:</p>
-                <p className="text-sm text-slate-300">{option.description}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-200 mb-1">Why Stronger:</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Why Stronger</p>
                 <p className="text-sm text-slate-300">{option.whyStronger}</p>
               </div>
-              {option.whoToTarget && (
-                <div>
-                  <p className="text-sm font-medium text-slate-200 mb-1">Who to Target:</p>
-                  <p className="text-sm text-slate-300">{option.whoToTarget}</p>
-                </div>
-              )}
-              {option.whatToBuild && (
-                <div>
-                  <p className="text-sm font-medium text-slate-200 mb-1">What to Build/Change:</p>
-                  <p className="text-sm text-slate-300">{option.whatToBuild}</p>
-                </div>
-              )}
-              {option.week1Experiment && (
-                <div>
-                  <p className="text-sm font-medium text-slate-200 mb-1">Week-1 Experiment:</p>
-                  <p className="text-sm text-slate-300">{option.week1Experiment}</p>
-                </div>
-              )}
-              {option.successMetric && (
-                <div>
-                  <p className="text-sm font-medium text-slate-200 mb-1">Success Metric:</p>
-                  <p className="text-sm text-slate-300">{option.successMetric}</p>
-                </div>
-              )}
               <div>
-                <p className="text-sm font-medium text-slate-200 mb-1">Smallest MVP:</p>
-                <p className="text-sm text-cyan-400">{option.smallestMVP}</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Smallest MVP</p>
+                <p className="text-sm text-slate-300">{option.smallestMVP}</p>
               </div>
-            </CardContent>
+            </div>
           </Card>
         ))}
       </div>
     </Section>
   );
 }
-

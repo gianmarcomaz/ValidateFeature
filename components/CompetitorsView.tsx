@@ -1,10 +1,9 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
-import Link from "next/link";
 
-interface CompetitorAnalysis {
+interface Competitor {
   name: string;
   category: string;
   whatTheyDo: string;
@@ -13,63 +12,46 @@ interface CompetitorAnalysis {
 }
 
 interface CompetitorsViewProps {
-  competitorAnalysis: CompetitorAnalysis[];
-  evidenceCoverage?: number;
+  competitors?: Competitor[];
 }
 
-export function CompetitorsView({ competitorAnalysis, evidenceCoverage }: CompetitorsViewProps) {
-  if (!competitorAnalysis || competitorAnalysis.length === 0) {
+export function CompetitorsView({ competitors }: CompetitorsViewProps) {
+  if (!competitors || competitors.length === 0) {
     return null;
   }
 
   return (
     <Section title="Competitor Analysis">
-      {evidenceCoverage !== undefined && evidenceCoverage < 30 && (
-        <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
-          ⚠️ Low evidence coverage ({Math.round(evidenceCoverage)}/100) - Competitor analysis may be incomplete
-        </div>
-      )}
-      
       <div className="grid md:grid-cols-2 gap-4">
-        {competitorAnalysis.map((competitor, index) => (
-          <Card key={index} className="hover:bg-white/10 transition-colors">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <CardTitle className="text-lg mb-1">{competitor.name}</CardTitle>
-                  <span className="text-xs px-2 py-1 bg-white/10 rounded-full text-slate-300">
-                    {competitor.category}
-                  </span>
-                </div>
-                {competitor.link && (
-                  <Link
-                    href={competitor.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-1 transition-colors"
-                  >
-                    Visit
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </Link>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
+        {competitors.map((competitor, index) => (
+          <Card key={index} hover className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-300 font-medium mb-1">What they do:</p>
-                <p className="text-sm text-slate-400">{competitor.whatTheyDo}</p>
+                <h4 className="font-semibold text-white">{competitor.name}</h4>
+                <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-slate-700 text-slate-300">
+                  {competitor.category}
+                </span>
               </div>
-              <div>
-                <p className="text-sm text-slate-300 font-medium mb-1">Why it overlaps:</p>
-                <p className="text-sm text-slate-400">{competitor.whyOverlaps}</p>
-              </div>
-            </CardContent>
+              <a
+                href={competitor.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-teal hover:text-teal-light transition-colors text-sm"
+              >
+                Visit →
+              </a>
+            </div>
+
+            <p className="text-sm text-slate-400">{competitor.whatTheyDo}</p>
+
+            <div className="pt-2 border-t border-slate-700/50">
+              <p className="text-xs text-slate-500">
+                <span className="text-slate-400">Overlap:</span> {competitor.whyOverlaps}
+              </p>
+            </div>
           </Card>
         ))}
       </div>
     </Section>
   );
 }
-

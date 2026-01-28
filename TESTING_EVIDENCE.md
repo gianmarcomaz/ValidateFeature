@@ -7,8 +7,7 @@ This guide walks you through testing the new evidence gathering features.
 1. **Environment Setup** (Optional but Recommended)
    - Add to `.env.local`:
      ```
-     GOOGLE_CSE_API_KEY=your_key_here
-     GOOGLE_CSE_CX=your_cx_here
+    SERPER_API_KEY=your_key_here
      ```
    - If you don't have Google CSE keys, the app will still work but only fetch Hacker News data.
 

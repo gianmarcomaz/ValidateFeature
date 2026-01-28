@@ -5,12 +5,13 @@
  */
 
 import { deriveKeywords } from "../lib/evidence/keywords";
-import { googleSearch } from "../lib/evidence/googleCse";
+import { googleSearch, GoogleSearchResult } from "../lib/evidence/googleCse";
 import { searchHackerNews } from "../lib/evidence/hackerNews";
 import { normalizeEvidence, generateCompetitorSummary } from "../lib/evidence/normalize";
 import { computeSignals } from "../lib/evidence/signals";
 import { buildSearchQueries } from "../lib/evidence/queryBuilder";
 import { extractCompetitorsFromGoogle } from "../lib/evidence/competitors";
+import { GoogleCseQueryResult } from "../lib/evidence/types";
 
 async function main() {
   const query = process.argv[2];
@@ -36,14 +37,17 @@ async function main() {
 
     // Fetch evidence
     console.log("Fetching evidence from Google CSE and Hacker News...\n");
-    
+
     // Execute Google searches sequentially
-    const googleResults = [];
+    const googleSearchResults: GoogleSearchResult[] = [];
     for (const q of searchQueries) {
       const result = await googleSearch(q);
-      googleResults.push(result);
+      googleSearchResults.push(result);
       await new Promise(resolve => setTimeout(resolve, 250));
     }
+
+    // Extract the actual query results from GoogleSearchResult
+    const googleResults: GoogleCseQueryResult[] = googleSearchResults.map(r => r.result);
 
     const hnResults = await searchHackerNews(keywords);
 
@@ -54,7 +58,7 @@ async function main() {
     // Extract competitors
     const competitors = extractCompetitorsFromGoogle(googleResults);
     const competitorSummary = generateCompetitorSummary(competitors);
-    
+
     console.log(`🎯 Competitors Found: ${competitors.length}`);
     competitors.slice(0, 8).forEach((c, i) => {
       console.log(`   ${i + 1}. ${c.name} (${c.category}) - ${c.confidence} confidence`);
@@ -88,7 +92,7 @@ async function main() {
     const fs = await import("fs/promises");
     const path = await import("path");
     const outputPath = path.join(process.cwd(), "evidence.sample.json");
-    
+
     const fullEvidence = {
       ...evidenceWithCompetitors,
       signals,
@@ -99,12 +103,11 @@ async function main() {
 
   } catch (error: any) {
     console.error("\n❌ Error:", error.message);
-    if (error.message.includes("GOOGLE_CSE")) {
-      console.error("\n⚠️  Make sure GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX are set in .env.local");
+    if (error.message.includes("GOOGLE_CSE") || error.message.includes("SERPER")) {
+      console.error("\n⚠️  Make sure SERPER_API_KEY or GOOGLE_CSE_API_KEY + GOOGLE_CSE_CX is set in .env.local");
     }
     process.exit(1);
   }
 }
 
 main();
-

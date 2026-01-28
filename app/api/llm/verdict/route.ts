@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Evidence is optional - if missing, verdict still works but with lower confidence
     const evidenceMissing = !evidence;
     const signals = evidence?.signals;
-    
+
     // Log evidence structure for debugging (counts only)
     if (evidence) {
       const googleCount = evidence.google?.queries?.reduce((sum: number, q: any) => sum + (q.items?.length || 0), 0) || 0;
@@ -93,17 +93,17 @@ CRITICAL RULES:
         { status: 500 }
       );
     }
-    
+
     // Validate with Zod
     try {
       let validated = VerdictResponseSchema.parse(verdict);
-      
+
       // Post-process: Ensure verdict respects evidence constraints
       if (evidence) {
         const competitors = evidence.competitors || [];
         const evidenceCoverage = evidence.signals?.evidenceCoverage || 0;
         const marketEstablished = evidence.signals?.marketEstablished || false;
-        
+
         // If evidence coverage is low, force lower confidence
         if (evidenceCoverage < 30 && validated.confidence === "HIGH") {
           validated.confidence = "MEDIUM";
@@ -113,20 +113,20 @@ CRITICAL RULES:
             );
           }
         }
-        
+
         // Ensure competitorAnalysis matches actual competitors
         if (competitors.length > 0 && validated.competitorAnalysis) {
           // Validate that competitorAnalysis references actual competitors
-          const competitorNames = new Set(competitors.map(c => c.name.toLowerCase()));
+          const competitorNames = new Set(competitors.map((c: any) => c.name.toLowerCase()));
           validated.competitorAnalysis = validated.competitorAnalysis
             .filter(comp => {
               const nameMatch = competitorNames.has(comp.name.toLowerCase());
               // Allow if name matches or if URL matches a competitor
-              return nameMatch || competitors.some(c => c.url === comp.link);
+              return nameMatch || competitors.some((c: any) => c.url === comp.link);
             })
             .slice(0, 5); // Max 5
         }
-        
+
         // If market is established but verdict claims otherwise, add limitation
         if (marketEstablished && competitors.length >= 3) {
           const reasonsText = validated.reasons.map(r => r.detail).join(" ").toLowerCase();
@@ -136,16 +136,16 @@ CRITICAL RULES:
             );
           }
         }
-        
+
         // Post-process: Ensure citations are added to reasons when evidence exists
         const googleItems = evidence.google?.queries?.flatMap((q: any) => q.items || []) || [];
         const hnHits = evidence.hackernews?.hits || [];
         const hasCitations = googleItems.length > 0 || hnHits.length > 0;
-        
+
         if (hasCitations) {
           // Build available citations for post-processing
           const availableCitations: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" | "website" }> = [];
-          
+
           // Add Google citations
           googleItems.slice(0, 10).forEach((item: any) => {
             if (item.title && item.link) {
@@ -157,7 +157,7 @@ CRITICAL RULES:
               });
             }
           });
-          
+
           // Add HN citations
           hnHits.slice(0, 5).forEach((hit: any) => {
             if (hit.title && hit.url) {
@@ -169,7 +169,7 @@ CRITICAL RULES:
               });
             }
           });
-          
+
           // Add website evidence citations if available
           if (startup?.websiteEvidence?.pages) {
             startup.websiteEvidence.pages.slice(0, 3).forEach((page: any) => {
@@ -183,14 +183,14 @@ CRITICAL RULES:
               }
             });
           }
-          
+
           // If reasons don't have citations but evidence exists, add them
           validated.reasons = validated.reasons.map((reason, idx) => {
             // If reason already has citations, keep them
             if (reason.evidenceCitations && reason.evidenceCitations.length > 0) {
               return reason;
             }
-            
+
             // Otherwise, add relevant citations (2-4 per reason)
             // Select citations that might be relevant to this reason
             const reasonText = `${reason.title} ${reason.detail}`.toLowerCase();
@@ -198,17 +198,17 @@ CRITICAL RULES:
               .filter(citation => {
                 // Simple relevance check: if reason mentions keywords from citation
                 const citationText = `${citation.title} ${citation.snippet}`.toLowerCase();
-                return reasonText.split(" ").some(word => 
+                return reasonText.split(" ").some(word =>
                   word.length > 4 && citationText.includes(word)
                 ) || idx < availableCitations.length; // Fallback: assign by index
               })
               .slice(0, 4);
-            
+
             // If no relevant citations found, just use first few available
-            const citationsToAdd = relevantCitations.length > 0 
-              ? relevantCitations 
+            const citationsToAdd = relevantCitations.length > 0
+              ? relevantCitations
               : availableCitations.slice(idx * 2, idx * 2 + 4);
-            
+
             return {
               ...reason,
               evidenceCitations: citationsToAdd.slice(0, 4),
@@ -216,17 +216,17 @@ CRITICAL RULES:
           });
         }
       }
-      
+
       return NextResponse.json(validated);
     } catch (validationError: any) {
       console.error("Zod validation failed:", validationError);
-      
+
       // If validation fails but we have evidence, return a safe fallback verdict
       if (evidence) {
         const competitors = evidence.competitors || [];
         const evidenceCoverage = evidence.signals?.evidenceCoverage || 0;
         const marketEstablished = evidence.signals?.marketEstablished || false;
-        
+
         const fallbackVerdict = {
           verdict: evidenceCoverage < 30 ? "RISKY" : marketEstablished && competitors.length >= 5 ? "RISKY" : "BUILD",
           confidence: evidenceCoverage < 30 ? "LOW" : "MEDIUM",
@@ -237,7 +237,7 @@ CRITICAL RULES:
             },
           ],
           pivotOptions: [],
-          competitorAnalysis: competitors.slice(0, 5).map(c => ({
+          competitorAnalysis: competitors.slice(0, 5).map((c: any) => ({
             name: c.name,
             category: c.category,
             whatTheyDo: c.overlapReason,
@@ -258,10 +258,10 @@ CRITICAL RULES:
             ],
           },
         };
-        
+
         return NextResponse.json(fallbackVerdict);
       }
-      
+
       return NextResponse.json(
         { error: "Validation failed", details: validationError.errors || validationError.message },
         { status: 500 }
@@ -269,13 +269,13 @@ CRITICAL RULES:
     }
   } catch (error: any) {
     console.error("Error in verdict route:", error);
-    
+
     // Handle OpenAI API errors
     if (error?.status === 401 || error?.message?.includes("401") || error?.message?.includes("authentication")) {
       const keyPresent = !!process.env.OPENAI_API_KEY;
       const keyLength = process.env.OPENAI_API_KEY?.length || 0;
       const keyPrefix = process.env.OPENAI_API_KEY?.substring(0, 3) || "N/A";
-      
+
       console.error("OpenAI Auth Error Details:", {
         keyPresent,
         keyLength,
@@ -283,16 +283,16 @@ CRITICAL RULES:
         errorMessage: error?.message,
         errorStatus: error?.status,
       });
-      
+
       return NextResponse.json(
-        { 
-          error: "OpenAI authentication failed", 
-          details: `Check your API key. Key present: ${keyPresent}, Length: ${keyLength}, Prefix: ${keyPrefix}. Original error: ${error?.message || "Unknown error"}. Make sure your .env.local file is in the project root and you've restarted the dev server after adding the key.` 
+        {
+          error: "OpenAI authentication failed",
+          details: `Check your API key. Key present: ${keyPresent}, Length: ${keyLength}, Prefix: ${keyPrefix}. Original error: ${error?.message || "Unknown error"}. Make sure your .env.local file is in the project root and you've restarted the dev server after adding the key.`
         },
         { status: 401 }
       );
     }
-    
+
     if (error?.status === 429) {
       return NextResponse.json(
         { error: "Rate limit exceeded", details: "Please try again later" },

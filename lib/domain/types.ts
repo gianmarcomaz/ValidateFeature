@@ -1,4 +1,4 @@
-// Domain types for FeatureValidate
+// Domain types for Validate app
 
 export type Mode = "early" | "existing";
 

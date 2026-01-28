@@ -2,252 +2,164 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { IntakeForm } from "@/components/IntakeForm";
-import { Spinner } from "@/components/ui/Spinner";
-import { createSubmission, updateSubmission, updateSubmissionNormalized, updateSubmissionVerdict } from "@/lib/firebase/db";
-import { useMotionConfig } from "@/lib/motion";
-import { SubmissionInput } from "@/lib/domain/types";
+import { motion } from "framer-motion";
+import { ensureAnonymousAuth } from "@/lib/firebase/auth";
+import { createSubmission, updateSubmission } from "@/lib/firebase/db";
+import { IntakeForm, FeatureFormData } from "@/components/IntakeForm";
 
-export default function NewFeaturePage() {
+export default function NewPage() {
   const router = useRouter();
-  const { fadeUp } = useMotionConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (data: SubmissionInput) => {
+  const handleSubmit = async (data: FeatureFormData) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Create submission in Firestore (status: "draft") - no auth required for MVP
-      const submissionId = await createSubmission(data, null);
+      // Ensure user is authenticated
+      const userId = await ensureAnonymousAuth();
+      if (!userId) {
+        throw new Error("Failed to authenticate. Please try again.");
+      }
 
-      // Call normalize API
+      // Create initial submission
+      const submissionId = await createSubmission(
+        {
+          mode: data.mode,
+          startup: data.startup,
+          feature: data.feature,
+          icp: data.icp,
+          goalMetric: data.goalMetric,
+        },
+        userId
+      );
+
+      // Normalize the input
       const normalizeRes = await fetch("/api/llm/normalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          feature: data.feature,
+          icp: data.icp,
+          goalMetric: data.goalMetric,
+          mode: data.mode,
+        }),
       });
 
       if (!normalizeRes.ok) {
         const errorData = await normalizeRes.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || "Failed to normalize feature");
+        throw new Error(errorData.error || "Failed to normalize input");
       }
 
       const normalized = await normalizeRes.json();
 
       // Update submission with normalized data
-      await updateSubmissionNormalized(submissionId, normalized);
+      await updateSubmission(submissionId, { normalized });
 
-      // Fetch evidence from external sources
+      // Fetch evidence
+      const evidenceRes = await fetch("/api/evidence/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: data.feature.title,
+          keywords: normalized.keywordQuerySet,
+          startup: data.startup,
+          feature: data.feature,
+        }),
+      });
+
       let evidence = null;
-      try {
-        // Build query using startup + feature context
-        const queryParts: string[] = [];
-        if (data.startup?.name && data.startup.name !== "unknown") {
-          queryParts.push(data.startup.name);
-        }
-        queryParts.push(data.feature.title);
-        if (data.feature.description) {
-          queryParts.push(data.feature.description);
-        }
-        const query = queryParts.join(" ");
-
-        const evidenceRes = await fetch("/api/evidence/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query,
-            keywords: normalized.keywordQuerySet?.slice(0, 8), // Use top keywords from normalized
-            startup: data.startup ? {
-              name: data.startup.name,
-              targetAudience: data.startup.targetAudience,
-              problemSolved: data.startup.problemSolved,
-              websiteUrl: data.startup.websiteUrl,
-            } : undefined,
-            feature: {
-              title: data.feature.title,
-              description: data.feature.description,
-              problemSolved: data.feature.problemSolved,
-              targetAudience: data.feature.targetAudience,
-            },
-          }),
-        });
-
-        if (evidenceRes.ok) {
-          const evidenceData = await evidenceRes.json();
-          evidence = evidenceData.evidence;
-          
-          // Log evidence for debugging
-          console.log("[Form] Evidence received:", {
-            competitors: evidence?.competitors?.length || 0,
-            googleResults: evidence?.google?.queries?.reduce((sum: number, q: any) => sum + (q.items?.length || 0), 0) || 0,
-            hnResults: evidence?.hackernews?.hits?.length || 0,
-            signals: evidence?.signals ? {
-              competitor_density: evidence.signals.competitor_density,
-              evidenceCoverage: evidence.signals.evidenceCoverage,
-              marketEstablished: evidence.signals.marketEstablished,
-            } : null,
-          });
-          
-          // Store evidence in Firestore
-          try {
-            await updateSubmission(submissionId, { evidence });
-            console.log("[Form] Evidence stored successfully");
-          } catch (firestoreErr: any) {
-            console.error("[Form] Failed to store evidence in Firestore:", firestoreErr?.message || firestoreErr);
-            // Continue - evidence will be missing but submission continues
-          }
-        } else {
-          const errorData = await evidenceRes.json().catch(() => ({}));
-          console.warn("Evidence fetch failed:", errorData);
-          // Store evidence object with warnings instead of null
-          evidence = {
-            google: { configured: false, queries: [] },
-            hackernews: { hits: [] },
-            competitors: [],
-            competitorSummary: { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" },
-            signals: {
-              competitor_density: 0,
-              recency_score: 50,
-              pain_signal: 0,
-              overall_evidence_score: 0,
-              evidenceCoverage: 0,
-              marketEstablished: false,
-              notes: ["Evidence fetch failed"],
-            },
-            citations: [],
-            warnings: [{
-              type: "api_error",
-              message: "Evidence fetch failed",
-              details: errorData.error?.message || "Could not fetch evidence from external sources",
-            }],
-            generatedAt: new Date().toISOString(),
-          };
-          try {
-            await updateSubmission(submissionId, { evidence });
-          } catch (firestoreErr: any) {
-            console.error("[Form] Failed to store evidence error in Firestore:", firestoreErr?.message || firestoreErr);
-          }
-        }
-      } catch (err: any) {
-        console.warn("Error fetching evidence:", err);
-        // Store evidence object with warnings instead of null
-        evidence = {
-          google: { configured: false, queries: [] },
-          hackernews: { hits: [] },
-          competitors: [],
-          competitorSummary: { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" },
-          signals: {
-            competitor_density: 0,
-            recency_score: 50,
-            pain_signal: 0,
-            overall_evidence_score: 0,
-            evidenceCoverage: 0,
-            marketEstablished: false,
-            notes: ["Evidence fetch error"],
-          },
-          citations: [],
-          warnings: [{
-            type: "api_error",
-            message: "Evidence fetch error",
-            details: err?.message || "Unexpected error while fetching evidence",
-          }],
-          generatedAt: new Date().toISOString(),
-        };
-        try {
-          await updateSubmission(submissionId, { evidence });
-        } catch (firestoreErr: any) {
-          console.error("[Form] Failed to store evidence error in Firestore:", firestoreErr?.message || firestoreErr);
-        }
+      if (evidenceRes.ok) {
+        const evidenceData = await evidenceRes.json();
+        evidence = evidenceData.evidence; // Unwrap the evidence object
+        await updateSubmission(submissionId, { evidence });
       }
 
-      // Call verdict API with evidence
+      // Get verdict
       const verdictRes = await fetch("/api/llm/verdict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...data,
+          feature: data.feature,
+          icp: data.icp,
+          goalMetric: data.goalMetric,
+          mode: data.mode,
           normalized,
-          evidence, // Pass evidence to verdict route
+          evidence,
+          startup: data.startup,
         }),
       });
 
       if (!verdictRes.ok) {
         const errorData = await verdictRes.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || "Failed to generate verdict");
+        throw new Error(errorData.error || "Failed to get verdict");
       }
 
       const verdict = await verdictRes.json();
 
-      // Create placeholder signals
-      const signals = {
-        trends: { status: "TODO" as const },
-        community: { status: "TODO" as const },
-        competitors: { status: "TODO" as const },
-      };
+      // Update submission with verdict
+      await updateSubmission(submissionId, {
+        verdict,
+        status: "verdict_ready"
+      });
 
-      // Update submission with verdict (sets status to "verdict_ready") and signals
-      await updateSubmissionVerdict(submissionId, verdict);
-      await updateSubmission(submissionId, { signals });
-
-      // Redirect to results page
+      // Navigate to results
       router.push(`/s/${submissionId}`);
     } catch (err: any) {
-      console.error("Error submitting feature:", err);
-      setError(err.message || "Failed to process feature. Please try again.");
+      console.error("Submission error:", err);
+      setError(err.message || "Something went wrong. Please try again.");
       setIsLoading(false);
     }
   };
 
   return (
-    <main className="py-12">
-      <div className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-fuchsia-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-            Validate a New Feature
+    <main className="min-h-screen bg-navy-900 py-12">
+      {/* Subtle background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,107,74,0.05)_0%,_transparent_50%)]" />
+
+      <div className="relative mx-auto max-w-3xl px-6">
+        {/* Header */}
+        <motion.div
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            New Validation
           </h1>
-          <p className="text-xl text-slate-300">
-            Describe your feature idea and target user to get an instant verdict
+          <p className="text-slate-400">
+            Tell us about your feature idea and we'll assess its potential
           </p>
-        </div>
+        </motion.div>
 
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Spinner size="lg" className="mx-auto mb-4" />
-              <p className="text-slate-300">Processing your feature idea...</p>
-            </div>
-          </div>
-        )}
-
-        {!isLoading && (
+        {/* Error Alert */}
+        {error && (
           <motion.div
-            className="rounded-2xl border border-white/10 bg-white/5 p-8 md:p-10 backdrop-blur"
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
+            className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
           >
-            <IntakeForm onSubmit={handleSubmit} isLoading={isLoading} />
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
           </motion.div>
         )}
+
+        {/* Form Container */}
+        <motion.div
+          className="bg-navy-800/60 border border-slate-700/50 rounded-2xl p-6 md:p-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <IntakeForm onSubmit={handleSubmit} isLoading={isLoading} />
+        </motion.div>
       </div>
     </main>
   );
 }
-

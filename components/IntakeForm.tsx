@@ -2,115 +2,86 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mode, GoalMetric, StartupContext, FeatureContext } from "@/lib/domain/types";
-import { useMotionConfig } from "@/lib/motion";
 import { Spinner } from "@/components/ui/Spinner";
+import type { Mode, GoalMetric, StartupContext, FeatureContext, ICPInput } from "@/lib/domain/types";
+
+export interface FeatureFormData {
+  mode: Mode;
+  startup?: StartupContext;
+  feature: FeatureContext;
+  icp: ICPInput;
+  goalMetric: GoalMetric;
+}
 
 interface IntakeFormProps {
-  onSubmit: (data: {
-    mode: Mode;
-    startup?: StartupContext;
-    feature: FeatureContext;
-    icp: { role: string; industry?: string; companySize?: string };
-    goalMetric: GoalMetric;
-  }) => Promise<void>;
+  onSubmit: (data: FeatureFormData) => void;
   isLoading?: boolean;
 }
 
 export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
-  const { reduceMotion, fadeUp } = useMotionConfig();
   const [mode, setMode] = useState<Mode>("early");
-  
-  // Startup context state
-  const [startupTab, setStartupTab] = useState<"website" | "manual">("website");
+  const [startupSource, setStartupSource] = useState<"website" | "manual">("manual");
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [isIngesting, setIsIngesting] = useState(false);
-  const [ingestError, setIngestError] = useState<string | null>(null);
+  const [isLoadingWebsite, setIsLoadingWebsite] = useState(false);
+  const [websiteError, setWebsiteError] = useState<string | null>(null);
+
+  // Startup context
   const [startupName, setStartupName] = useState("");
   const [startupDescription, setStartupDescription] = useState("");
   const [startupWhatItDoes, setStartupWhatItDoes] = useState("");
   const [startupProblemSolved, setStartupProblemSolved] = useState("");
   const [startupTargetAudience, setStartupTargetAudience] = useState("");
-  const [startupBusinessModel, setStartupBusinessModel] = useState("");
-  const [startupDifferentiators, setStartupDifferentiators] = useState("");
-  
-  // Feature context state
+
+  // Feature context
   const [featureTitle, setFeatureTitle] = useState("");
   const [featureDescription, setFeatureDescription] = useState("");
   const [featureProblemSolved, setFeatureProblemSolved] = useState("");
   const [featureTargetAudience, setFeatureTargetAudience] = useState("");
-  
-  // ICP state
+
+  // ICP
   const [icpRole, setIcpRole] = useState("");
   const [icpIndustry, setIcpIndustry] = useState("");
   const [icpCompanySize, setIcpCompanySize] = useState("");
+
+  // Goal
   const [goalMetric, setGoalMetric] = useState<GoalMetric>("activation");
 
-  const handleAutoFill = async () => {
-    if (!websiteUrl.trim()) {
-      setIngestError("Please enter a website URL");
-      return;
-    }
+  const handleWebsiteFetch = async () => {
+    if (!websiteUrl) return;
 
-    setIsIngesting(true);
-    setIngestError(null);
+    setIsLoadingWebsite(true);
+    setWebsiteError(null);
 
     try {
-      const response = await fetch("/api/startup/ingest", {
+      const res = await fetch("/api/website-context", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: websiteUrl }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || "Failed to ingest website");
+      if (!res.ok) {
+        throw new Error("Failed to fetch website data");
       }
 
-      const data = await response.json();
-      
-      if (data.startup) {
-        setStartupName(data.startup.name || "");
-        setStartupDescription(data.startup.description || "");
-        setStartupWhatItDoes(data.startup.whatItDoes || "");
-        setStartupProblemSolved(data.startup.problemSolved || "");
-        setStartupTargetAudience(data.startup.targetAudience || "");
-        setStartupBusinessModel(data.startup.businessModel || "");
-        setStartupDifferentiators(data.startup.differentiators?.join(", ") || "");
-      }
+      const data = await res.json();
 
-      if (data.warnings && data.warnings.length > 0) {
-        setIngestError(`Warnings: ${data.warnings.join(", ")}`);
-      }
-    } catch (err: any) {
-      setIngestError(err.message || "Failed to auto-fill from website");
+      setStartupName(data.name || "");
+      setStartupDescription(data.description || "");
+      setStartupWhatItDoes(data.whatItDoes || "");
+      setStartupProblemSolved(data.problemSolved || "");
+      setStartupTargetAudience(data.targetAudience || "");
+    } catch (err) {
+      setWebsiteError("Could not fetch website data. Please enter manually.");
     } finally {
-      setIsIngesting(false);
+      setIsLoadingWebsite(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Build startup context if provided
-    let startup: StartupContext | undefined;
-    if (startupName || startupDescription) {
-      startup = {
-        source: startupTab,
-        websiteUrl: startupTab === "website" ? websiteUrl : undefined,
-        name: startupName,
-        description: startupDescription,
-        whatItDoes: startupWhatItDoes,
-        problemSolved: startupProblemSolved,
-        targetAudience: startupTargetAudience,
-        businessModel: startupBusinessModel || undefined,
-        differentiators: startupDifferentiators ? startupDifferentiators.split(",").map(d => d.trim()).filter(Boolean) : undefined,
-      };
-    }
-    
-    await onSubmit({
+
+    const formData: FeatureFormData = {
       mode,
-      startup,
       feature: {
         title: featureTitle,
         description: featureDescription,
@@ -123,372 +94,277 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
         companySize: icpCompanySize || undefined,
       },
       goalMetric,
-    });
+    };
+
+    if (mode === "existing") {
+      formData.startup = {
+        source: startupSource,
+        websiteUrl: startupSource === "website" ? websiteUrl : undefined,
+        name: startupName,
+        description: startupDescription,
+        whatItDoes: startupWhatItDoes,
+        problemSolved: startupProblemSolved,
+        targetAudience: startupTargetAudience,
+      };
+    }
+
+    onSubmit(formData);
   };
 
+  const inputClass = "w-full px-4 py-3 bg-navy-900 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:border-accent focus:ring-1 focus:ring-accent/30 transition-all duration-200";
+  const labelClass = "block text-sm font-medium text-slate-300 mb-2";
+
   return (
-    <motion.form
-      onSubmit={handleSubmit}
-      className="space-y-8"
-      variants={fadeUp}
-      initial="hidden"
-      animate="visible"
-    >
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Mode Selection */}
       <div>
-        <label className="block text-sm font-semibold text-slate-200 mb-2">
-          Mode
-        </label>
-        <div className="flex gap-4">
-          <label className="flex items-center text-slate-300">
-            <input
-              type="radio"
-              name="mode"
-              value="early"
-              checked={mode === "early"}
-              onChange={(e) => setMode(e.target.value as Mode)}
-              className="mr-2"
-            />
-            Early-stage founder
-          </label>
-          <label className="flex items-center text-slate-300">
-            <input
-              type="radio"
-              name="mode"
-              value="existing"
-              checked={mode === "existing"}
-              onChange={(e) => setMode(e.target.value as Mode)}
-              className="mr-2"
-            />
-            Existing startup
-          </label>
+        <label className={labelClass}>What stage are you at?</label>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setMode("early")}
+            className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${mode === "early"
+                ? "bg-accent text-white"
+                : "bg-navy-900 border border-slate-700 text-slate-400 hover:border-slate-500"
+              }`}
+          >
+            Early Stage
+            <span className="block text-xs opacity-70 mt-0.5">New idea, no product yet</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("existing")}
+            className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${mode === "existing"
+                ? "bg-accent text-white"
+                : "bg-navy-900 border border-slate-700 text-slate-400 hover:border-slate-500"
+              }`}
+          >
+            Existing Product
+            <span className="block text-xs opacity-70 mt-0.5">Adding to live product</span>
+          </button>
         </div>
       </div>
 
-      {/* Startup Context Section */}
-      <div className="space-y-4 p-6 rounded-xl border border-white/10 bg-white/5">
-        <h2 className="text-xl font-bold text-slate-100 mb-4">Startup Context</h2>
-        
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => setStartupTab("website")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              startupTab === "website"
-                ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/50"
-                : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"
-            }`}
-          >
-            Website Link (Auto-fill)
-          </button>
-          <button
-            type="button"
-            onClick={() => setStartupTab("manual")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              startupTab === "manual"
-                ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/50"
-                : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"
-            }`}
-          >
-            Manual
-          </button>
-        </div>
+      {/* Startup Context (for existing mode) */}
+      {mode === "existing" && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="space-y-6 p-6 bg-navy-900/50 rounded-xl border border-slate-700/50"
+        >
+          <div>
+            <h3 className="text-white font-medium mb-4">About Your Startup</h3>
 
-        {startupTab === "website" ? (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="website-url" className="block text-sm font-semibold text-slate-200 mb-2">
-                Website URL
-              </label>
-              <div className="flex gap-2">
+            {/* Source Toggle */}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setStartupSource("website")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${startupSource === "website"
+                    ? "bg-accent text-white"
+                    : "bg-transparent text-slate-400 border border-slate-700"
+                  }`}
+              >
+                From Website
+              </button>
+              <button
+                type="button"
+                onClick={() => setStartupSource("manual")}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${startupSource === "manual"
+                    ? "bg-accent text-white"
+                    : "bg-transparent text-slate-400 border border-slate-700"
+                  }`}
+              >
+                Enter Manually
+              </button>
+            </div>
+
+            {startupSource === "website" && (
+              <div className="flex gap-3 mb-4">
                 <input
-                  id="website-url"
                   type="url"
                   value={websiteUrl}
                   onChange={(e) => setWebsiteUrl(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-                  placeholder="https://example.com"
+                  placeholder="https://yourcompany.com"
+                  className={inputClass}
                 />
                 <button
                   type="button"
-                  onClick={handleAutoFill}
-                  disabled={isIngesting || !websiteUrl.trim()}
-                  className="px-4 py-3 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 hover:bg-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={handleWebsiteFetch}
+                  disabled={isLoadingWebsite || !websiteUrl}
+                  className="btn-primary px-5 whitespace-nowrap disabled:opacity-50"
                 >
-                  {isIngesting ? <Spinner size="sm" /> : "Auto-fill"}
+                  {isLoadingWebsite ? <Spinner size="sm" /> : "Fetch"}
                 </button>
               </div>
-              {ingestError && (
-                <p className="mt-2 text-sm text-yellow-300">{ingestError}</p>
-              )}
+            )}
+
+            {websiteError && (
+              <p className="text-red-400 text-sm mb-4">{websiteError}</p>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className={labelClass}>Startup Name</label>
+                <input
+                  type="text"
+                  value={startupName}
+                  onChange={(e) => setStartupName(e.target.value)}
+                  placeholder="e.g., Acme Inc"
+                  className={inputClass}
+                  required={mode === "existing"}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>What does it do?</label>
+                <textarea
+                  value={startupWhatItDoes}
+                  onChange={(e) => setStartupWhatItDoes(e.target.value)}
+                  placeholder="Describe your core product or service"
+                  rows={2}
+                  className={inputClass}
+                  required={mode === "existing"}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Target Audience</label>
+                <input
+                  type="text"
+                  value={startupTargetAudience}
+                  onChange={(e) => setStartupTargetAudience(e.target.value)}
+                  placeholder="e.g., Small business owners"
+                  className={inputClass}
+                  required={mode === "existing"}
+                />
+              </div>
             </div>
           </div>
-        ) : null}
+        </motion.div>
+      )}
 
-        {/* Startup fields (editable after auto-fill) */}
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="startup-name" className="block text-sm font-semibold text-slate-200 mb-2">
-              Startup Name *
-            </label>
-            <input
-              id="startup-name"
-              type="text"
-              required
-              value={startupName}
-              onChange={(e) => setStartupName(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-              placeholder="Your startup name"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="startup-description" className="block text-sm font-semibold text-slate-200 mb-2">
-              Description *
-            </label>
-            <textarea
-              id="startup-description"
-              required
-              value={startupDescription}
-              onChange={(e) => setStartupDescription(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200 resize-none"
-              placeholder="Brief description of your startup"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="startup-what-it-does" className="block text-sm font-semibold text-slate-200 mb-2">
-              What It Does *
-            </label>
-            <textarea
-              id="startup-what-it-does"
-              required
-              value={startupWhatItDoes}
-              onChange={(e) => setStartupWhatItDoes(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200 resize-none"
-              placeholder="What your product/service does"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="startup-problem-solved" className="block text-sm font-semibold text-slate-200 mb-2">
-              Problem Solved *
-            </label>
-            <textarea
-              id="startup-problem-solved"
-              required
-              value={startupProblemSolved}
-              onChange={(e) => setStartupProblemSolved(e.target.value)}
-              rows={2}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200 resize-none"
-              placeholder="What problem does your startup solve?"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="startup-target-audience" className="block text-sm font-semibold text-slate-200 mb-2">
-              Target Audience *
-            </label>
-            <input
-              id="startup-target-audience"
-              type="text"
-              required
-              value={startupTargetAudience}
-              onChange={(e) => setStartupTargetAudience(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-              placeholder="Who is your target audience?"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="startup-business-model" className="block text-sm font-semibold text-slate-200 mb-2">
-              Business Model (Optional)
-            </label>
-            <input
-              id="startup-business-model"
-              type="text"
-              value={startupBusinessModel}
-              onChange={(e) => setStartupBusinessModel(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-              placeholder="How do you make money?"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="startup-differentiators" className="block text-sm font-semibold text-slate-200 mb-2">
-              Differentiators (Optional, comma-separated)
-            </label>
-            <input
-              id="startup-differentiators"
-              type="text"
-              value={startupDifferentiators}
-              onChange={(e) => setStartupDifferentiators(e.target.value)}
-              className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-              placeholder="Key differentiators, separated by commas"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Feature Context Section */}
-      <div className="space-y-4 p-6 rounded-xl border border-white/10 bg-white/5">
-        <h2 className="text-xl font-bold text-slate-100 mb-4">Feature Context</h2>
+      {/* Feature Context */}
+      <div className="space-y-4">
+        <h3 className="text-white font-medium">Feature Details</h3>
 
         <div>
-          <label htmlFor="feature-title" className="block text-sm font-semibold text-slate-200 mb-2">
-            Feature Title *
-          </label>
+          <label className={labelClass}>Feature Title</label>
           <input
-            id="feature-title"
             type="text"
-            required
             value={featureTitle}
             onChange={(e) => setFeatureTitle(e.target.value)}
-            className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-            placeholder="e.g., AI-powered code review assistant"
+            placeholder="e.g., AI-Powered Report Generator"
+            className={inputClass}
+            required
           />
         </div>
 
         <div>
-          <label htmlFor="feature-description" className="block text-sm font-semibold text-slate-200 mb-2">
-            Feature Description *
-          </label>
+          <label className={labelClass}>Description</label>
           <textarea
-            id="feature-description"
-            required
             value={featureDescription}
             onChange={(e) => setFeatureDescription(e.target.value)}
-            rows={4}
-            className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200 resize-none"
-            placeholder="Describe the feature idea and how it works..."
+            placeholder="What does this feature do?"
+            rows={3}
+            className={inputClass}
+            required
           />
         </div>
 
         <div>
-          <label htmlFor="feature-problem-solved" className="block text-sm font-semibold text-slate-200 mb-2">
-            Problem Solved *
-          </label>
+          <label className={labelClass}>Problem it Solves</label>
           <textarea
-            id="feature-problem-solved"
-            required
             value={featureProblemSolved}
             onChange={(e) => setFeatureProblemSolved(e.target.value)}
+            placeholder="What pain point does this address?"
             rows={2}
-            className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200 resize-none"
-            placeholder="What problem does this feature solve?"
+            className={inputClass}
+            required
           />
         </div>
 
         <div>
-          <label htmlFor="feature-target-audience" className="block text-sm font-semibold text-slate-200 mb-2">
-            Target Audience *
-          </label>
+          <label className={labelClass}>Target Users</label>
           <input
-            id="feature-target-audience"
             type="text"
-            required
             value={featureTargetAudience}
             onChange={(e) => setFeatureTargetAudience(e.target.value)}
-            className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-            placeholder="Who is the target audience for this feature?"
+            placeholder="Who will use this feature?"
+            className={inputClass}
+            required
           />
         </div>
       </div>
 
-      {/* ICP Role */}
-      <div>
-        <label htmlFor="icp-role" className="block text-sm font-semibold text-slate-200 mb-2">
-          Target User Role (ICP) *
-        </label>
-        <input
-          id="icp-role"
-          type="text"
-          required
-          value={icpRole}
-          onChange={(e) => setIcpRole(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-          placeholder="e.g., Software Engineer, Product Manager, CEO"
-        />
-      </div>
+      {/* ICP */}
+      <div className="space-y-4">
+        <h3 className="text-white font-medium">Ideal Customer Profile</h3>
 
-      {/* ICP Industry (Optional) */}
-      <div>
-        <label htmlFor="icp-industry" className="block text-sm font-semibold text-slate-200 mb-2">
-          Industry (Optional)
-        </label>
-        <input
-          id="icp-industry"
-          type="text"
-          value={icpIndustry}
-          onChange={(e) => setIcpIndustry(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-          placeholder="e.g., SaaS, FinTech, Healthcare"
-        />
-      </div>
-
-      {/* ICP Company Size (Optional) */}
-      <div>
-        <label htmlFor="icp-company-size" className="block text-sm font-semibold text-slate-200 mb-2">
-          Company Size (Optional)
-        </label>
-        <input
-          id="icp-company-size"
-          type="text"
-          value={icpCompanySize}
-          onChange={(e) => setIcpCompanySize(e.target.value)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 placeholder:text-slate-400 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
-          placeholder="e.g., 1-10, 11-50, 51-200, 201+"
-        />
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className={labelClass}>Role / Title</label>
+            <input
+              type="text"
+              value={icpRole}
+              onChange={(e) => setIcpRole(e.target.value)}
+              placeholder="e.g., Product Manager"
+              className={inputClass}
+              required
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Industry (optional)</label>
+            <input
+              type="text"
+              value={icpIndustry}
+              onChange={(e) => setIcpIndustry(e.target.value)}
+              placeholder="e.g., SaaS"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Company Size (optional)</label>
+            <input
+              type="text"
+              value={icpCompanySize}
+              onChange={(e) => setIcpCompanySize(e.target.value)}
+              placeholder="e.g., 10-50 employees"
+              className={inputClass}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Goal Metric */}
       <div>
-        <label htmlFor="goal-metric" className="block text-sm font-semibold text-slate-200 mb-2">
-          Goal Metric *
-        </label>
+        <label className={labelClass}>Primary Goal Metric</label>
         <select
-          id="goal-metric"
-          required
           value={goalMetric}
           onChange={(e) => setGoalMetric(e.target.value as GoalMetric)}
-          className="w-full px-4 py-3 border border-white/10 rounded-xl bg-white/5 text-slate-100 focus:bg-white/15 focus:ring-2 focus:ring-fuchsia-500/30 focus:border-fuchsia-400 transition-colors duration-200"
+          className={inputClass}
         >
-          <option value="activation" className="bg-slate-900">Activation</option>
-          <option value="retention" className="bg-slate-900">Retention</option>
-          <option value="revenue" className="bg-slate-900">Revenue</option>
-          <option value="support" className="bg-slate-900">Support Reduction</option>
+          <option value="activation">Activation - Get users to experience value</option>
+          <option value="retention">Retention - Keep users coming back</option>
+          <option value="revenue">Revenue - Drive monetization</option>
+          <option value="support">Support - Reduce support burden</option>
         </select>
       </div>
 
       {/* Submit Button */}
-      <motion.button
+      <button
         type="submit"
         disabled={isLoading}
-        className="group relative w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/20 hover:shadow-xl hover:shadow-fuchsia-500/25 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden focus-visible:ring-2 focus-visible:ring-fuchsia-400/60 focus-visible:ring-offset-0"
-        whileTap={reduceMotion ? {} : { scale: 0.98 }}
-        transition={{ duration: 0.1 }}
+        className="btn-primary w-full py-4 text-base disabled:opacity-50"
       >
-        <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-fuchsia-500/30 to-cyan-500/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        <span className="relative flex items-center gap-2">
-          {isLoading && (
-            <motion.svg
-              className="w-4 h-4 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-              initial={{ opacity: 0, rotate: 0 }}
-              animate={{ opacity: 1, rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </motion.svg>
-          )}
-          {isLoading ? "Processing..." : "Get Instant Verdict"}
-        </span>
-      </motion.button>
-    </motion.form>
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-3">
+            <Spinner size="sm" />
+            Analyzing...
+          </span>
+        ) : (
+          "Get Validation Verdict"
+        )}
+      </button>
+    </form>
   );
 }

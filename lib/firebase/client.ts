@@ -2,26 +2,19 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { getFirebaseClientEnv } from "@/lib/config/env";
 
-// Validate required environment variables
+// Validate required environment variables and build Firebase config
 function getFirebaseConfig() {
-  const config = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  };
+  const env = getFirebaseClientEnv();
 
-  const missing = Object.entries(config)
-    .filter(([_, value]) => !value)
-    .map(([key]) => {
-      const envVarName = `NEXT_PUBLIC_FIREBASE_${key
-        .replace(/([A-Z])/g, "_$1")
-        .toUpperCase()}`;
-      return envVarName;
-    });
+  const missing: string[] = [];
+  if (!env.apiKeyPresent) missing.push("NEXT_PUBLIC_FIREBASE_API_KEY");
+  if (!env.authDomain) missing.push("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN");
+  if (!env.projectId) missing.push("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+  if (!env.storageBucket) missing.push("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET");
+  if (!env.messagingSenderIdPresent) missing.push("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID");
+  if (!env.appIdPresent) missing.push("NEXT_PUBLIC_FIREBASE_APP_ID");
 
   if (missing.length > 0) {
     const errorMsg = `Missing required Firebase environment variables: ${missing.join(", ")}. Please check your .env.local file.`;
@@ -32,12 +25,12 @@ function getFirebaseConfig() {
   }
 
   return {
-    apiKey: config.apiKey!,
-    authDomain: config.authDomain!,
-    projectId: config.projectId!,
-    storageBucket: config.storageBucket!,
-    messagingSenderId: config.messagingSenderId!,
-    appId: config.appId!,
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY as string,
+    authDomain: env.authDomain as string,
+    projectId: env.projectId as string,
+    storageBucket: env.storageBucket as string,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID as string,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID as string,
   };
 }
 

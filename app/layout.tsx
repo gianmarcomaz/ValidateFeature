@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Navbar } from "@/components/ui/Navbar";
+import { Footer } from "@/components/ui/Footer";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "FeatureValidate - Validate your next feature in minutes",
+  title: "Validate - Feature Validation Platform",
   description: "Get instant verdicts on feature ideas with transparent evidence and validation sprint plans",
 };
 
@@ -16,8 +21,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100`}>{children}</body>
+      <body className={`${inter.className} min-h-screen bg-navy-900 text-white antialiased`}>
+        <Navbar />
+        <main className="pt-16">
+          {children}
+        </main>
+        <Footer />
+      </body>
     </html>
   );
 }
-

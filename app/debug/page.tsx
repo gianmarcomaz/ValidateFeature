@@ -83,24 +83,29 @@ export default function DebugPage() {
       const userId = await ensureAnonymousAuth();
       if (userId) {
         setHealth((prev) => ({ ...prev, firebase: { ...prev.firebase, auth: "success" } }));
-        
+
         // Test write
         setHealth((prev) => ({ ...prev, firebase: { ...prev.firebase, write: "pending" } }));
         const testData: SubmissionInput = {
           mode: "early",
-          feature: { title: "Debug Test Feature", description: "Testing Firebase write capability" },
+          feature: {
+            title: "Debug Test Feature",
+            description: "Testing Firebase write capability",
+            problemSolved: "Testing",
+            targetAudience: "Developers"
+          },
           icp: { role: "Developer" },
           goalMetric: "activation",
         };
         const submissionId = await createSubmission(testData, userId);
         setHealth((prev) => ({ ...prev, firebase: { ...prev.firebase, write: "success" } }));
-        
+
         // Test read
         setHealth((prev) => ({ ...prev, firebase: { ...prev.firebase, read: "pending" } }));
         const submission = await getSubmission(submissionId);
         if (submission && submission.featureTitle === "Debug Test Feature") {
           setHealth((prev) => ({ ...prev, firebase: { ...prev.firebase, read: "success" } }));
-          
+
           // Test sprint subcollection
           setHealth((prev) => ({ ...prev, firebase: { ...prev.firebase, sprint: "pending" } }));
           const testSprint = {

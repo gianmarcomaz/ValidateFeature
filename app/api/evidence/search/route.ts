@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { EvidenceQueryInput, NormalizedEvidence } from "@/lib/evidence/types";
+import { EvidenceQueryInput, NormalizedEvidence, GoogleCseQueryResult } from "@/lib/evidence/types";
 import { searchGoogleCse } from "@/lib/evidence/googleCse";
 import { searchHackerNews } from "@/lib/evidence/hackerNews";
 import { normalizeEvidence, generateCompetitorSummary } from "@/lib/evidence/normalize";
@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
     if (!googleConfigured) {
       warnings.push({
         type: "missing_config",
-        message: "Google CSE not configured",
-        details: "Set GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX in .env.local to enable Google search results",
+        message: "Serper.dev search not configured",
+        details: "Set SERPER_API_KEY in .env.local to enable external search results",
       });
     }
     
@@ -142,22 +142,22 @@ export async function POST(request: NextRequest) {
       if (errorTypes.has("rate_limit")) {
         warnings.push({
           type: "api_error",
-          message: "Google CSE rate limit reached",
-          details: "Some queries were skipped due to rate limiting",
+          message: "Serper.dev rate limit reached",
+          details: "Some queries were skipped due to Serper.dev rate limiting",
         });
       } else if (errorTypes.has("auth_error")) {
         warnings.push({
           type: "api_error",
-          message: "Google CSE authentication failed",
-          details: "Check your API key and quota",
+          message: "Serper.dev authentication failed",
+          details: "Check SERPER_API_KEY and your Serper.dev account credits/plan.",
         });
       } else if (errorTypes.has("api_error") || errorTypes.has("missing_config")) {
         // missing_config is already handled above, but check for api_error
         if (!errorTypes.has("missing_config")) {
           warnings.push({
             type: "api_error",
-            message: "Google CSE API error occurred",
-            details: "Some search queries may have failed",
+            message: "Serper.dev API error occurred",
+            details: "Some search queries may have failed on Serper.dev",
           });
         }
       }
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     if (googleConfigured && googleItemCount === 0) {
       warnings.push({
         type: "no_results",
-        message: "No Google search results found",
+        message: "No external search results found",
         details: "Try adjusting search queries or check if queries are too specific",
       });
     }
@@ -177,9 +177,9 @@ export async function POST(request: NextRequest) {
     
     // Additional debug: Check if APIs are actually being called
     if (!googleConfigured) {
-      console.log(`[Evidence] Google CSE not configured - check GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX env vars`);
+      console.log(`[Evidence] Serper.dev search not configured - check SERPER_API_KEY env var`);
     } else if (googleItemCount === 0) {
-      console.log(`[Evidence] Google CSE configured but returned 0 items - check API quota or query relevance`);
+      console.log(`[Evidence] Serper.dev search configured but returned 0 items - check API quota or query relevance`);
     }
     
     if (hnResults.length === 0) {
