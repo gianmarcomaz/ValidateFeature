@@ -1,6 +1,8 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
+import { MessageSquare, ArrowUp, ExternalLink, Calendar } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface HackerNewsHit {
     title: string;
@@ -19,19 +21,17 @@ interface MarketTrendsProps {
 export function MarketTrends({ hackerNewsHits, recencyScore }: MarketTrendsProps) {
     if (!hackerNewsHits || hackerNewsHits.length === 0) {
         return (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in">
                 <div>
                     <h2 className="text-xl font-semibold text-white mb-1">Community Signals</h2>
                     <p className="text-sm text-slate-400">Discussions and trends from developer communities</p>
                 </div>
-                <div className="text-center py-12 bg-navy-800/50 rounded-xl border border-slate-700/50">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
+                <div className="text-center py-12 bg-void-900/50 rounded-xl border border-white/5 backdrop-blur-sm">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-void-800 flex items-center justify-center border border-white/5">
+                        <MessageSquare className="text-slate-600" size={24} />
                     </div>
-                    <p className="text-slate-400">No community discussions found</p>
-                    <p className="text-xs text-slate-500 mt-1">This could indicate an untapped opportunity</p>
+                    <p className="text-slate-400 font-medium">No community discussions found</p>
+                    <p className="text-xs text-slate-500 mt-1">This could indicate an untapped opportunity or niche market.</p>
                 </div>
             </div>
         );
@@ -46,16 +46,16 @@ export function MarketTrends({ hackerNewsHits, recencyScore }: MarketTrendsProps
         if (diffDays === 0) return "Today";
         if (diffDays === 1) return "Yesterday";
         if (diffDays < 7) return `${diffDays} days ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-        if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-        return `${Math.floor(diffDays / 365)} years ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} wks ago`;
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)} mos ago`;
+        return `${Math.floor(diffDays / 365)} yrs ago`;
     };
 
     const getEngagementLevel = (points?: number, comments?: number) => {
         const total = (points || 0) + (comments || 0) * 2;
-        if (total >= 100) return { label: "High", color: "text-teal bg-teal/10" };
-        if (total >= 30) return { label: "Medium", color: "text-amber-400 bg-amber-500/10" };
-        return { label: "Low", color: "text-slate-400 bg-slate-500/10" };
+        if (total >= 100) return { label: "High", color: "text-cyan bg-cyan/10 border-cyan/20" };
+        if (total >= 30) return { label: "Medium", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+        return { label: "Low", color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
     };
 
     // Sort by engagement
@@ -65,99 +65,122 @@ export function MarketTrends({ hackerNewsHits, recencyScore }: MarketTrendsProps
         return bScore - aScore;
     });
 
+    const topHits = sortedHits.slice(0, 5);
+    const chartData = topHits.map(hit => ({
+        name: hit.title.substring(0, 15) + "...",
+        engagement: (hit.points || 0) + (hit.num_comments || 0) * 2,
+        points: hit.points || 0,
+        comments: hit.num_comments || 0,
+    }));
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-void-900 border border-white/10 p-3 rounded-lg shadow-xl backdrop-blur-md">
+                    <p className="text-white font-medium text-xs mb-2">{label}</p>
+                    <p className="text-cyan text-xs">Engagement: {payload[0].value}</p>
+                    <p className="text-slate-400 text-xs">Points: {payload[0].payload.points}</p>
+                    <p className="text-slate-400 text-xs">Comments: {payload[0].payload.comments}</p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-fade-in">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-white mb-1">Community Signals</h2>
+                    <h2 className="text-xl font-semibold text-white mb-1">Community Trends</h2>
                     <p className="text-sm text-slate-400">
-                        {hackerNewsHits.length} discussions found on Hacker News
+                        Analysis of {hackerNewsHits.length} relevant discussions
                     </p>
                 </div>
                 {recencyScore !== undefined && (
                     <div className="text-right">
-                        <p className="text-xs text-slate-500">Recency Score</p>
-                        <p className={`text-lg font-bold ${recencyScore >= 60 ? 'text-teal' : recencyScore >= 30 ? 'text-amber-400' : 'text-slate-400'}`}>
+                        <p className="text-xs text-slate-500 mb-1">Recency Score</p>
+                        <div className={`text-lg font-bold px-3 py-1 rounded-lg border ${recencyScore >= 60 ? 'text-cyan border-cyan/30 bg-cyan/10' : recencyScore >= 30 ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' : 'text-slate-400 border-slate-600/30 bg-slate-600/10'}`}>
                             {Math.round(recencyScore)}%
-                        </p>
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Trend Summary */}
-            <Card className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                </div>
-                <div>
-                    <p className="font-medium text-white">
-                        {sortedHits.length > 3 ? "Active Discussion Topic" : "Moderate Interest"}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                        {sortedHits.reduce((sum, h) => sum + (h.points || 0), 0)} total upvotes •
-                        {" "}{sortedHits.reduce((sum, h) => sum + (h.num_comments || 0), 0)} total comments
-                    </p>
-                </div>
-            </Card>
+            <div className="grid lg:grid-cols-3 gap-6">
+                {/* Chart Section */}
+                <Card className="lg:col-span-1 min-h-[300px] flex flex-col justify-center">
+                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-6">Top Engagement</p>
+                    <div className="w-full h-[200px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData}>
+                                <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                                <Bar dataKey="engagement" radius={[4, 4, 0, 0]}>
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={`url(#barGradient-${index})`} />
+                                    ))}
+                                </Bar>
+                                <defs>
+                                    {chartData.map((_, index) => (
+                                        <linearGradient key={`barGradient-${index}`} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.8} />
+                                            <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.3} />
+                                        </linearGradient>
+                                    ))}
+                                </defs>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </Card>
 
-            {/* Discussions List */}
-            <div className="space-y-3">
-                {sortedHits.slice(0, 8).map((hit, index) => {
-                    const engagement = getEngagementLevel(hit.points, hit.num_comments);
+                {/* Discussions List */}
+                <div className="lg:col-span-2 space-y-3">
+                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Recent Discussions</p>
+                    {sortedHits.slice(0, 6).map((hit, index) => {
+                        const engagement = getEngagementLevel(hit.points, hit.num_comments);
 
-                    return (
-                        <a
-                            key={hit.objectID || index}
-                            href={hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block p-4 bg-navy-800/60 border border-slate-700/50 rounded-xl hover:border-slate-600 transition-all duration-200 group"
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1">
-                                    <h3 className="font-medium text-white group-hover:text-accent transition-colors line-clamp-2">
-                                        {hit.title}
-                                    </h3>
-                                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                                        <span>{formatDate(hit.created_at)}</span>
-                                        <span>•</span>
-                                        <span className="flex items-center gap-1">
-                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M10 15.172l-6.364 3.35 1.216-7.086L.293 6.964l7.106-1.032L10 0l2.6 5.932 7.107 1.032-4.559 4.472 1.216 7.086L10 15.172z" />
-                                            </svg>
-                                            {hit.points || 0}
+                        return (
+                            <a
+                                key={hit.objectID || index}
+                                href={hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block p-4 bg-void-900/40 border border-white/5 rounded-xl hover:border-cyan/30 hover:bg-void-800/60 transition-all duration-300 group"
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-medium text-slate-200 group-hover:text-cyan transition-colors line-clamp-1">
+                                            {hit.title}
+                                        </h3>
+                                        <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                            <span className="flex items-center gap-1">
+                                                <Calendar size={12} />
+                                                {formatDate(hit.created_at)}
+                                            </span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                                            <span className="flex items-center gap-1">
+                                                <ArrowUp size={12} />
+                                                {hit.points || 0}
+                                            </span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                                            <span className="flex items-center gap-1">
+                                                <MessageSquare size={12} />
+                                                {hit.num_comments || 0}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${engagement.color}`}>
+                                            {engagement.label}
                                         </span>
-                                        <span>•</span>
-                                        <span className="flex items-center gap-1">
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                            </svg>
-                                            {hit.num_comments || 0}
-                                        </span>
+                                        <ExternalLink size={14} className="text-slate-600 group-hover:text-cyan transition-colors" />
                                     </div>
                                 </div>
-                                <span className={`px-2 py-1 rounded text-xs ${engagement.color}`}>
-                                    {engagement.label}
-                                </span>
-                            </div>
-                        </a>
-                    );
-                })}
-            </div>
-
-            {/* View on HN link */}
-            <div className="text-center">
-                <a
-                    href="https://news.ycombinator.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-slate-500 hover:text-white transition-colors"
-                >
-                    View more on Hacker News →
-                </a>
+                            </a>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

@@ -12,9 +12,9 @@ import { EvidenceMetrics } from "@/components/EvidenceMetrics";
 import { TransparencyPanel } from "@/components/TransparencyPanel";
 import { SprintPlanView } from "@/components/SprintPlanView";
 import { MarketOverview, CompetitorGrid, MarketTrends, EvidenceSources } from "@/components/dashboard";
-import { useMotionConfig } from "@/lib/motion";
+import { DashboardSidebar } from "@/components/ui/DashboardSidebar";
+import { ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 
-// Flexible interface to match Firestore document
 interface Submission {
   id?: string;
   feature?: { title?: string; description?: string };
@@ -33,14 +33,13 @@ type TabType = "verdict" | "market" | "competitors" | "evidence";
 export default function SubmissionPage() {
   const params = useParams();
   const id = params.id as string;
-  const { reduceMotion, fadeUp, staggerContainer } = useMotionConfig();
 
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sprintLoading, setSprintLoading] = useState(false);
   const [sprints, setSprints] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<TabType>("verdict");
+  const [activeTab, setActiveTab] = useState<string>("verdict");
 
   useEffect(() => {
     async function fetchSubmission() {
@@ -102,14 +101,13 @@ export default function SubmissionPage() {
     }
   };
 
-  // Get competitor data from both verdict and evidence
   const getCompetitors = () => {
     const verdictCompetitors = submission?.verdict?.competitorAnalysis || [];
     const evidenceCompetitors = submission?.evidence?.competitors || [];
     // Merge and deduplicate by name
     const allCompetitors = [...evidenceCompetitors, ...verdictCompetitors];
     const uniqueNames = new Set<string>();
-    return allCompetitors.filter(c => {
+    return allCompetitors.filter((c) => {
       if (uniqueNames.has(c.name)) return false;
       uniqueNames.add(c.name);
       return true;
@@ -118,10 +116,10 @@ export default function SubmissionPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-navy-900 flex items-center justify-center">
+      <main className="min-h-screen bg-void-950 flex items-center justify-center">
         <div className="text-center">
           <Spinner size="lg" />
-          <p className="mt-4 text-slate-400">Loading results...</p>
+          <p className="mt-4 text-slate-400 animate-pulse">Analyzing market signals...</p>
         </div>
       </main>
     );
@@ -129,11 +127,12 @@ export default function SubmissionPage() {
 
   if (error || !submission) {
     return (
-      <main className="min-h-screen bg-navy-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error || "Submission not found"}</p>
-          <Link href="/" className="btn-secondary">
-            Go Home
+      <main className="min-h-screen bg-void-950 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6 bg-void-900 border border-white/5 rounded-2xl">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <p className="text-red-400 mb-6 font-medium">{error || "Submission not found"}</p>
+          <Link href="/" className="btn-secondary w-full">
+            Return to Dashboard
           </Link>
         </div>
       </main>
@@ -145,197 +144,157 @@ export default function SubmissionPage() {
   const citations = submission.evidence?.citations || [];
   const googleQueries = submission.evidence?.google?.queries || [];
 
-  const tabs: { id: TabType; label: string; count?: number }[] = [
-    { id: "verdict", label: "Verdict" },
-    { id: "market", label: "Market Analysis" },
-    { id: "competitors", label: "Competitors", count: competitors.length },
-    { id: "evidence", label: "Evidence", count: citations.length },
-  ];
-
   return (
-    <main className="min-h-screen bg-navy-900 py-12">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(45,212,191,0.05)_0%,_transparent_50%)]" />
+    <div className="min-h-screen bg-void-950 flex font-sans text-slate-300 selection:bg-accent/30 selection:text-white overflow-hidden">
+      {/* Sidebar Navigation */}
+      <DashboardSidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        title={submission.featureTitle}
+      />
 
-      <div className="relative mx-auto max-w-5xl px-6">
-        {/* Header */}
-        <motion.div
-          className="mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-white transition-colors mb-6">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to home
-          </Link>
+      {/* Main Content Area */}
+      <main className="flex-1 ml-64 h-screen overflow-y-auto overflow-x-hidden">
+        <div className="max-w-7xl mx-auto p-8 lg:p-12">
 
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {submission.featureTitle || submission.feature?.title}
-              </h1>
-              <p className="text-slate-400">{submission.featureDescription || submission.feature?.description}</p>
+          {/* Dashboard Header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-white/5">
+            <div className="space-y-4 max-w-2xl">
+              <div>
+                <h1 className="text-3xl font-bold text-white tracking-tight leading-tight">
+                  {submission.featureTitle || submission.feature?.title}
+                </h1>
+                <p className="text-slate-400 mt-2 text-lg leading-relaxed">
+                  {submission.featureDescription || submission.feature?.description}
+                </p>
+              </div>
+
+              {/* Status Badges */}
+              <div className="flex items-center gap-3">
+                {submission.verdict && (
+                  <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${submission.verdict.verdict === "BUILD" ? "bg-teal/10 text-teal border-teal/20" :
+                      submission.verdict.verdict === "PIVOT" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                        "bg-red-500/10 text-red-400 border-red-500/20"
+                    }`}>
+                    {submission.verdict.verdict}
+                  </div>
+                )}
+                {submission.startup && (
+                  <div className="px-3 py-1 rounded-full text-xs font-medium bg-void-800 border border-white/5 text-slate-400">
+                    {submission.startup.name}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Quick verdict badge */}
-            {submission.verdict && (
-              <div className={`px-4 py-2 rounded-xl text-sm font-medium ${submission.verdict.verdict === "BUILD" ? "bg-teal/20 text-teal border border-teal/30" :
-                submission.verdict.verdict === "PIVOT" ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" :
-                  "bg-red-500/20 text-red-400 border border-red-500/30"
-                }`}>
-                {submission.verdict.verdict} • {submission.verdict.confidence}
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Startup Context */}
-        {submission.startup && (
-          <motion.div
-            className="mb-6 p-4 bg-navy-800/60 border border-slate-700/50 rounded-xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-          >
-            <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">For</p>
-            <p className="text-sm text-white">{submission.startup.name}</p>
-          </motion.div>
-        )}
-
-        {/* Tab Navigation */}
-        <motion.div
-          className="mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${activeTab === tab.id
-                  ? "bg-accent/20 text-accent border border-accent/30"
-                  : "bg-navy-800/60 text-slate-400 border border-slate-700/50 hover:text-white hover:border-slate-600"
-                  }`}
-              >
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${activeTab === tab.id ? "bg-accent/30" : "bg-slate-700"
-                    }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Tab Content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {activeTab === "verdict" && (
-              <div className="space-y-8">
-                {/* Verdict */}
-                {submission.verdict && (
-                  <VerdictView
-                    verdict={submission.verdict.verdict}
-                    confidence={submission.verdict.confidence}
-                    reasons={submission.verdict.reasons}
-                  />
-                )}
-
-                {/* Evidence Metrics (condensed) */}
-                {submission.evidence && (
-                  <EvidenceMetrics evidence={submission.evidence} />
-                )}
-
-                {/* Pivot Options */}
-                {submission.verdict?.pivotOptions && submission.verdict.pivotOptions.length > 0 && (
-                  <PivotOptions options={submission.verdict.pivotOptions} />
-                )}
-
-                {/* Transparency */}
-                {submission.verdict?.transparency && (
-                  <TransparencyPanel
-                    transparency={submission.verdict.transparency}
-                    evidence={submission.evidence}
-                    startup={submission.startup}
-                  />
-                )}
-              </div>
-            )}
-
-            {activeTab === "market" && (
-              <div className="space-y-8">
-                <MarketOverview
-                  signals={submission.evidence?.signals}
-                  competitorCount={competitors.length}
-                  competitorSummary={submission.evidence?.competitorSummary}
-                />
-
-                <MarketTrends
-                  hackerNewsHits={hackerNewsHits}
-                  recencyScore={submission.evidence?.signals?.recency_score}
-                />
-              </div>
-            )}
-
-            {activeTab === "competitors" && (
-              <CompetitorGrid competitors={competitors} />
-            )}
-
-            {activeTab === "evidence" && (
-              <EvidenceSources
-                citations={citations}
-                googleQueries={googleQueries}
-                hackerNewsHits={hackerNewsHits}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Sprint Generation */}
-        <motion.div
-          className="mt-12 pt-8 border-t border-slate-800"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-        >
-          {sprints.length === 0 ? (
-            <div className="text-center">
-              <p className="text-slate-400 mb-4">Ready to test this feature hypothesis?</p>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
               <button
                 onClick={handleGenerateSprint}
                 disabled={sprintLoading}
-                className="btn-primary"
+                className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5"
               >
                 {sprintLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Spinner size="sm" />
-                    Generating...
-                  </span>
+                  <>
+                    <Spinner size="sm" /> Generating Plan...
+                  </>
                 ) : (
-                  "Generate Validation Sprint"
+                  <>
+                    <Sparkles size={16} /> Generate Sprint
+                  </>
                 )}
               </button>
             </div>
-          ) : (
-            <div>
-              <h2 className="text-xl font-semibold text-white mb-6">Validation Sprint Plan</h2>
-              <SprintPlanView sprint={sprints[sprints.length - 1]} />
-            </div>
-          )}
-        </motion.div>
-      </div>
-    </main>
+          </div>
+
+          {/* Dynamic Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="min-h-[60vh]"
+            >
+              {activeTab === "verdict" && (
+                <div className="space-y-10 animate-fade-in">
+                  {/* Verdict View */}
+                  {submission.verdict && (
+                    <VerdictView
+                      verdict={submission.verdict.verdict}
+                      confidence={submission.verdict.confidence}
+                      reasons={submission.verdict.reasons}
+                    />
+                  )}
+
+                  {/* Evidence Metrics */}
+                  {submission.evidence && (
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <EvidenceMetrics evidence={submission.evidence} />
+                      {submission.verdict?.transparency && (
+                        <TransparencyPanel
+                          transparency={submission.verdict.transparency}
+                          evidence={submission.evidence}
+                          startup={submission.startup}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Pivot Options */}
+                  {submission.verdict?.pivotOptions && submission.verdict.pivotOptions.length > 0 && (
+                    <div className="pt-8 border-t border-white/5">
+                      <h3 className="text-lg font-semibold text-white mb-6">Strategic Pivot Options</h3>
+                      <PivotOptions options={submission.verdict.pivotOptions} />
+                    </div>
+                  )}
+
+                  {/* Sprints Section if exist */}
+                  {sprints.length > 0 && (
+                    <div className="pt-8 border-t border-white/5">
+                      <h3 className="text-lg font-semibold text-white mb-6">Validation Sprint Plan</h3>
+                      <SprintPlanView sprint={sprints[sprints.length - 1]} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "market" && (
+                <div className="space-y-10">
+                  <MarketOverview
+                    signals={submission.evidence?.signals}
+                    competitorCount={competitors.length}
+                    competitorSummary={submission.evidence?.competitorSummary}
+                  />
+                  <MarketTrends
+                    hackerNewsHits={hackerNewsHits}
+                    recencyScore={submission.evidence?.signals?.recency_score}
+                  />
+                </div>
+              )}
+
+              {activeTab === "competitors" && (
+                <CompetitorGrid competitors={competitors} />
+              )}
+
+              {activeTab === "evidence" && (
+                <EvidenceSources
+                  citations={citations}
+                  googleQueries={googleQueries}
+                  hackerNewsHits={hackerNewsHits}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Footer */}
+          <div className="mt-20 pt-8 border-t border-white/5 text-center text-slate-600 text-sm">
+            <p>Generated by Validate AI • Market data is real-time</p>
+          </div>
+
+        </div>
+      </main>
+    </div>
   );
 }

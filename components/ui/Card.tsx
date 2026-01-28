@@ -12,10 +12,10 @@ export function Card({ children, className, hover = false, variant = "default" }
   return (
     <div
       className={cn(
-        "rounded-2xl p-6",
-        variant === "default" && "bg-navy-800/80 border border-slate-700/50",
-        variant === "elevated" && "bg-navy-700/80 border border-slate-600/50",
-        hover && "transition-all duration-300 hover:border-slate-600 hover:-translate-y-0.5",
+        "rounded-2xl p-6 backdrop-blur-xl transition-all duration-300",
+        variant === "default" && "bg-void-900/60 border border-white/5",
+        variant === "elevated" && "bg-void-800/60 border border-white/10 shadow-lg",
+        hover && "hover:border-accent/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.1)] hover:-translate-y-1",
         className
       )}
     >
