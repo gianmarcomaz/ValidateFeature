@@ -10,24 +10,15 @@ export default function Home() {
     <main className="relative min-h-screen bg-void-950 overflow-hidden selection:bg-accent/30 selection:text-white">
       <LightWave />
 
-      {/* Navigation */}
-      <nav className="relative z-50 w-full px-6 py-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-              <Zap className="text-white" size={18} fill="currentColor" />
-            </div>
-            <span className="font-bold text-xl tracking-tight text-white">VALIDATE</span>
+      {/* Navigation - Removed as per user request */}
+      <div className="absolute top-6 left-6 z-50">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+            <Zap className="text-white" size={18} fill="currentColor" />
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-            <Link href="#features" className="hover:text-white transition-colors">Features</Link>
-            <Link href="#how-it-works" className="hover:text-white transition-colors">How it Works</Link>
-            <Link href="/new" className="px-5 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-white">
-              Sign In
-            </Link>
-          </div>
+          <span className="font-bold text-xl tracking-tight text-white">VALIDATE</span>
         </div>
-      </nav>
+      </div>
 
       {/* Hero Section */}
       <div className="relative z-10 flex flex-col justify-center items-center min-h-[85vh] px-6 text-center">

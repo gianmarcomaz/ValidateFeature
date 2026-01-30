@@ -15,7 +15,7 @@ export interface Competitor {
 
 // Known enterprise ATS domains for market saturation signals
 const ENTERPRISE_ATS_DOMAINS = [
-  "workday", "icims", "greenhouse", "lever", "smartrecruiters", 
+  "workday", "icims", "greenhouse", "lever", "smartrecruiters",
   "jobvite", "taleo", "cornerstone", "peoplefluent", "successfactors",
   "adp", "ultipro", "bamboohr", "zenefits"
 ];
@@ -139,7 +139,7 @@ function classifyCategory(item: GoogleCseItem, domain: string): CompetitorCatego
     scores["ATS"] += 5;
   }
 
-  const maxCategory = Object.entries(scores).reduce((max, [cat, score]) => 
+  const maxCategory = Object.entries(scores).reduce((max, [cat, score]) =>
     score > max[1] ? [cat, score] : max
   );
 
@@ -149,20 +149,22 @@ function classifyCategory(item: GoogleCseItem, domain: string): CompetitorCatego
 /**
  * Generate overlap reason from evidence
  */
+/**
+ * Generate overlap reason from evidence
+ */
 function generateOverlapReason(item: GoogleCseItem, category: CompetitorCategory): string {
   const snippet = (item.snippet || "").substring(0, 200);
-  
-  if (category === "ATS") {
-    return `ATS platform that handles resume parsing and candidate tracking`;
-  } else if (category === "Resume Optimizer") {
-    return `Resume optimization tool that helps candidates improve ATS compatibility`;
-  } else if (category === "Screening/Matching") {
-    return `Automated screening and matching solution for candidate evaluation`;
-  } else if (category === "Verification/Background") {
-    return `Background check and employment verification service`;
+
+  if (category === "ATS" || category === "Resume Optimizer" || category === "Screening/Matching") {
+    return `Potential competitor offering similar features or targeting the same market segment.`;
   }
-  
-  return `Related solution in the hiring/recruitment space`;
+
+  // Use the snippet itself as a fallback if it's descriptive enough, otherwise a generic message
+  if (snippet.length > 50) {
+    return snippet;
+  }
+
+  return `Operates in a conceptually similar market space based on search signals.`;
 }
 
 /**
@@ -188,7 +190,7 @@ export function extractCompetitorsFromGoogle(results: GoogleCseQueryResult[]): C
   results.forEach(queryResult => {
     queryResult.items.forEach(item => {
       const domain = extractDomain(item.link);
-      
+
       // Skip non-product domains
       if (!isProductDomain(domain) && !isEnterpriseATS(domain)) {
         // Allow if title/snippet suggests product
@@ -197,12 +199,12 @@ export function extractCompetitorsFromGoogle(results: GoogleCseQueryResult[]): C
         const text = `${title} ${snippet}`.toLowerCase();
         const hasProductTerms = PRODUCT_INDICATORS.some(term => text.includes(term)) ||
           Object.values(CATEGORY_KEYWORDS).flat().some(kw => text.includes(kw.toLowerCase()));
-        
+
         if (!hasProductTerms) return;
       }
 
       const score = computeCompetitorScore(item, domain);
-      
+
       // Only keep competitors with meaningful scores
       if (score < 10) return;
 
