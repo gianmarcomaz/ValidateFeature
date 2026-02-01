@@ -91,7 +91,7 @@ export default function NewPage() {
             New Validation
           </h1>
           <p className="text-slate-400">
-            Tell us about your feature idea and we'll assess its potential
+            Tell us about your feature idea and we&apos;ll assess its potential
           </p>
         </motion.div>
 
