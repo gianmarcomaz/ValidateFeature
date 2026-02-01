@@ -69,6 +69,10 @@ async function searchSerper(q: string): Promise<GoogleSearchResult> {
   console.log("[Search] Using Serper.dev with keyPrefix=", keyPrefix);
 
   try {
+    // Add request timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -79,7 +83,10 @@ async function searchSerper(q: string): Promise<GoogleSearchResult> {
         q,
         num: 10,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const rawBody = await response.text();
     const preview = rawBody.substring(0, 400);
@@ -123,6 +130,13 @@ async function searchSerper(q: string): Promise<GoogleSearchResult> {
 
     return { result: { q, items } };
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error("[Search] Serper request timeout for:", q);
+      return {
+        result: { q, items: [] },
+        error: { type: "api_error", message: "Request timeout (5s exceeded)" },
+      };
+    }
     console.error("[Search] Serper network error:", error?.message || error);
     return {
       result: { q, items: [] },
@@ -155,7 +169,13 @@ async function searchGoogleCseApi(q: string): Promise<GoogleSearchResult> {
   console.log("[Search] Using Google CSE with keyPrefix=", keyPrefix);
 
   try {
-    const response = await fetch(endpoint);
+    // Add request timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(endpoint, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
     const rawBody = await response.text();
     const preview = rawBody.substring(0, 400);
 
@@ -198,6 +218,13 @@ async function searchGoogleCseApi(q: string): Promise<GoogleSearchResult> {
 
     return { result: { q, items } };
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error("[Search] Google CSE request timeout for:", q);
+      return {
+        result: { q, items: [] },
+        error: { type: "api_error", message: "Request timeout (5s exceeded)" },
+      };
+    }
     console.error("[Search] Google CSE network error:", error?.message || error);
     return {
       result: { q, items: [] },
@@ -264,7 +291,7 @@ export function generateSearchQueries(keywords: string[]): string[] {
 }
 
 /**
- * Search with multiple queries
+ * Search with multiple queries - optimized with parallel batching
  */
 export async function searchGoogleCse(queries: string[]): Promise<{
   results: GoogleCseQueryResult[];
@@ -279,18 +306,30 @@ export async function searchGoogleCse(queries: string[]): Promise<{
   const googleCx = process.env.GOOGLE_CSE_CX?.trim();
   const configured = !!(serperKey || (googleKey && googleCx));
 
-  // Execute searches sequentially to avoid rate limits
-  for (const query of queries) {
-    const searchResult = await googleSearch(query);
-    results.push(searchResult.result);
+  // Execute searches in parallel batches to reduce latency
+  // Batch size of 4 balances speed vs rate limit risk
+  const BATCH_SIZE = 4;
+  const INTER_BATCH_DELAY_MS = 50;
 
-    if (searchResult.error) {
-      errors.push({ error: searchResult.error });
+  for (let i = 0; i < queries.length; i += BATCH_SIZE) {
+    const batch = queries.slice(i, i + BATCH_SIZE);
+
+    // Execute batch in parallel
+    const batchResults = await Promise.all(
+      batch.map(q => googleSearch(q))
+    );
+
+    // Collect results and errors
+    for (const searchResult of batchResults) {
+      results.push(searchResult.result);
+      if (searchResult.error) {
+        errors.push({ error: searchResult.error });
+      }
     }
 
-    // Small delay between requests
-    if (queries.indexOf(query) < queries.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+    // Small delay between batches (not between individual queries)
+    if (i + BATCH_SIZE < queries.length) {
+      await new Promise(resolve => setTimeout(resolve, INTER_BATCH_DELAY_MS));
     }
   }
 

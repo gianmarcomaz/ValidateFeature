@@ -1,9 +1,9 @@
 // Firestore database operations
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  getDoc, 
+import {
+  collection,
+  doc,
+  addDoc,
+  getDoc,
   getDocs,
   updateDoc,
   serverTimestamp,
@@ -64,7 +64,21 @@ export interface SubmissionDocument {
   };
   evidence?: any; // NormalizedEvidence from lib/evidence/types
   verdict?: VerdictResponse & { generatedAt?: Timestamp };
-  status: "draft" | "verdict_ready" | "sprint_ready";
+  status: "draft" | "processing" | "verdict_ready" | "partial" | "sprint_ready";
+  // Progressive processing fields (non-breaking additions)
+  stage?: "processing" | "normalizing" | "evidence" | "verdict" | "complete" | "partial";
+  timings?: {
+    submitMs?: number;
+    normalizeMs?: number;
+    evidenceMs?: number;
+    verdictMs?: number;
+    totalMs?: number;
+  };
+  processingError?: string;
+  quickSnapshot?: {
+    category?: string;
+    bullets?: string[];
+  };
 }
 
 // Sprint document schema matching MVP requirements exactly
@@ -80,11 +94,11 @@ export interface SprintDocument {
 export async function createSubmission(data: SubmissionInput, userId: string | null = null): Promise<string> {
   const firestoreDb = ensureDb();
   const now = serverTimestamp();
-  
+
   // Build submission with backward compatibility
   // Only include defined fields (Firestore doesn't accept undefined)
-  const submission: Omit<SubmissionDocument, "createdAt" | "updatedAt"> & { 
-    createdAt: any; 
+  const submission: Omit<SubmissionDocument, "createdAt" | "updatedAt"> & {
+    createdAt: any;
     updatedAt: any;
   } = {
     userId,
@@ -95,7 +109,7 @@ export async function createSubmission(data: SubmissionInput, userId: string | n
     createdAt: now,
     updatedAt: now,
   };
-  
+
   // Only include optional ICP fields if they're defined
   if (data.icp.industry !== undefined) {
     submission.icpIndustry = data.icp.industry;
@@ -103,7 +117,7 @@ export async function createSubmission(data: SubmissionInput, userId: string | n
   if (data.icp.companySize !== undefined) {
     submission.companySize = data.icp.companySize;
   }
-  
+
   // Add new startup + feature context if provided
   // Remove undefined values (Firestore doesn't accept undefined)
   if (data.startup) {
@@ -134,13 +148,13 @@ export async function createSubmission(data: SubmissionInput, userId: string | n
     if (data.feature.targetAudience !== undefined) cleanFeature.targetAudience = data.feature.targetAudience;
     submission.feature = cleanFeature;
   }
-  
+
   // Legacy fields for backward compatibility (if new fields not provided)
   if (!data.startup && !data.feature) {
     submission.featureTitle = (data.feature as any)?.title || "";
     submission.featureDescription = (data.feature as any)?.description || "";
   }
-  
+
   const docRef = await addDoc(collection(firestoreDb, "submissions"), submission);
   return docRef.id;
 }
@@ -152,7 +166,7 @@ export async function getSubmission(submissionId: string): Promise<SubmissionDoc
   const firestoreDb = ensureDb();
   const docRef = doc(firestoreDb, "submissions", submissionId);
   const docSnap = await getDoc(docRef);
-  
+
   if (docSnap.exists()) {
     return docSnap.data() as SubmissionDocument;
   }
@@ -242,20 +256,20 @@ export async function createSprint(
 ): Promise<string> {
   const firestoreDb = ensureDb();
   const now = serverTimestamp();
-  const sprint: Omit<SprintDocument, "createdAt" | "generatedAt"> & { 
-    createdAt: any; 
+  const sprint: Omit<SprintDocument, "createdAt" | "generatedAt"> & {
+    createdAt: any;
     generatedAt: any;
   } = {
     plan,
     createdAt: now,
     generatedAt: now,
   };
-  
+
   const docRef = await addDoc(collection(firestoreDb, "submissions", submissionId, "sprints"), sprint);
-  
+
   // Update submission status to sprint_ready
   await updateSubmission(submissionId, { status: "sprint_ready" });
-  
+
   return docRef.id;
 }
 
@@ -266,7 +280,7 @@ export async function getSprint(submissionId: string, sprintId: string): Promise
   const firestoreDb = ensureDb();
   const docRef = doc(firestoreDb, "submissions", submissionId, "sprints", sprintId);
   const docSnap = await getDoc(docRef);
-  
+
   if (docSnap.exists()) {
     return docSnap.data() as SprintDocument;
   }
@@ -280,7 +294,7 @@ export async function listSprints(submissionId: string): Promise<SprintDocument[
   const firestoreDb = ensureDb();
   const sprintsRef = collection(firestoreDb, "submissions", submissionId, "sprints");
   const snapshot = await getDocs(sprintsRef);
-  
+
   return snapshot.docs.map(doc => doc.data() as SprintDocument);
 }
 

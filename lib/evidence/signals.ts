@@ -36,7 +36,7 @@ function isProductDomain(domain: string): boolean {
  * Check if competitor is enterprise ATS
  */
 function isEnterpriseATS(domain: string): boolean {
-  const enterpriseATS = ["workday", "icims", "greenhouse", "lever", "smartrecruiters", 
+  const enterpriseATS = ["workday", "icims", "greenhouse", "lever", "smartrecruiters",
     "jobvite", "taleo", "cornerstone", "peoplefluent", "successfactors"];
   return enterpriseATS.some(ats => domain.toLowerCase().includes(ats));
 }
@@ -46,18 +46,18 @@ function isEnterpriseATS(domain: string): boolean {
  */
 function computeCompetitorDensity(competitors: Competitor[]): number {
   const count = competitors.length;
-  
+
   // Boost score if enterprise ATS found
   const enterpriseCount = competitors.filter(c => isEnterpriseATS(c.domain)).length;
   const enterpriseBoost = enterpriseCount * 20;
-  
+
   // Base score: 0-10 competitors = 0-50, 10-20 = 50-80, 20+ = 80-100
   let baseScore = 0;
   if (count === 0) baseScore = 0;
   else if (count <= 10) baseScore = Math.min(50, count * 5);
   else if (count <= 20) baseScore = 50 + (count - 10) * 3;
   else baseScore = Math.min(100, 80 + (count - 20) * 1);
-  
+
   return Math.min(100, baseScore + enterpriseBoost);
 }
 
@@ -69,7 +69,7 @@ function computeMarketEstablished(competitors: Competitor[]): boolean {
   // 1. Found 3+ competitors, OR
   // 2. Found any enterprise ATS
   if (competitors.length >= 3) return true;
-  
+
   return competitors.some(c => isEnterpriseATS(c.domain));
 }
 
@@ -123,11 +123,11 @@ function computePainSignal(googleResults: NormalizedEvidence["google"], hnResult
   let painScore = 0;
 
   // Check Google snippets for pain indicators
-  const allSnippets = googleResults.queries.flatMap(q => 
+  const allSnippets = googleResults.queries.flatMap(q =>
     q.items.map(item => (item.snippet || "").toLowerCase()).filter(s => s.length > 0)
   );
   let painMatches = 0;
-  
+
   allSnippets.forEach(snippet => {
     PAIN_INDICATORS.forEach(indicator => {
       if (snippet.includes(indicator)) {
@@ -146,7 +146,7 @@ function computePainSignal(googleResults: NormalizedEvidence["google"], hnResult
   // HN component: 0-50 based on high-comment stories
   const highCommentStories = hnResults.hits.filter(hit => (hit.num_comments || 0) > 10).length;
   const totalStories = hnResults.hits.length;
-  
+
   if (totalStories > 0) {
     const highCommentRatio = highCommentStories / totalStories;
     painScore += Math.min(50, highCommentRatio * 100);
@@ -164,7 +164,7 @@ function computeEvidenceCoverage(
   hnResults: NormalizedEvidence["hackernews"]
 ): number {
   let score = 0;
-  
+
   // Google results coverage (0-40)
   const googleItemCount = googleResults.queries.reduce((sum, q) => sum + q.items.length, 0);
   const uniqueDomains = new Set<string>();
@@ -174,30 +174,30 @@ function computeEvidenceCoverage(
       uniqueDomains.add(domain);
     });
   });
-  
+
   if (googleItemCount >= 30) score += 40;
   else if (googleItemCount >= 20) score += 30;
   else if (googleItemCount >= 10) score += 20;
   else if (googleItemCount > 0) score += 10;
-  
+
   // Competitor coverage (0-40)
   if (competitors.length >= 5) score += 40;
   else if (competitors.length >= 3) score += 30;
   else if (competitors.length >= 1) score += 20;
-  
+
   // Pricing pages indicate mature market (0-10)
-  const hasPricingPages = googleResults.queries.some(q => 
-    q.items.some(item => 
-      item.link.toLowerCase().includes("pricing") || 
+  const hasPricingPages = googleResults.queries.some(q =>
+    q.items.some(item =>
+      item.link.toLowerCase().includes("pricing") ||
       item.title.toLowerCase().includes("pricing")
     )
   );
   if (hasPricingPages) score += 10;
-  
+
   // HN coverage (0-10) - bonus, not required
   if (hnResults.hits.length >= 5) score += 10;
   else if (hnResults.hits.length > 0) score += 5;
-  
+
   return Math.min(100, score);
 }
 
@@ -216,8 +216,8 @@ function computeOverallScore(
   const adjustedCompetitor = competitorDensity * coverageWeight;
   const adjustedPain = painSignal * coverageWeight;
   const adjustedRecency = recencyScore * coverageWeight;
-  
-  const score = 
+
+  const score =
     (100 - adjustedCompetitor) * 0.35 +
     adjustedPain * 0.40 +
     adjustedRecency * 0.25;
@@ -291,6 +291,10 @@ function generateNotes(
  * Compute all signals from normalized evidence
  */
 export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): NormalizedEvidence["signals"] {
+  // Pre-compute flattened items ONCE for reuse across all computations
+  const allGoogleItems = evidence.google.queries.flatMap(q => q.items);
+  const painIndicatorSet = new Set(PAIN_INDICATORS.map(p => p.toLowerCase()));
+
   const competitors = evidence.competitors || [];
   const competitorDensity = computeCompetitorDensity(competitors);
   const marketEstablished = computeMarketEstablished(competitors);
@@ -310,8 +314,7 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
     evidence.hackernews
   );
 
-  // Build perMetricEvidence for inline display
-  const allGoogleItems = evidence.google.queries.flatMap(q => q.items);
+  // Reuse pre-computed allGoogleItems for perMetricEvidence
   const topCompetitors = competitors.slice(0, 3).map(c => ({
     name: c.name,
     url: c.url,
@@ -320,7 +323,7 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
 
   // Find pain indicators from Google snippets and HN
   const painIndicators: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" }> = [];
-  
+
   // From Google: find snippets with pain keywords
   for (const item of allGoogleItems) {
     const snippet = item.snippet || "";
@@ -335,7 +338,7 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
       });
     }
   }
-  
+
   // From HN: high comment stories
   const highCommentStories = evidence.hackernews.hits
     .filter(hit => (hit.num_comments || 0) > 10)
@@ -374,8 +377,8 @@ export function computeSignals(evidence: Omit<NormalizedEvidence, "signals">): N
   const recencySummary = `${recentCount} of ${evidence.hackernews.hits.length} posts in last 90 days`;
 
   // Evidence coverage details
-  const pricingPages = allGoogleItems.filter(item => 
-    item.link.toLowerCase().includes("pricing") || 
+  const pricingPages = allGoogleItems.filter(item =>
+    item.link.toLowerCase().includes("pricing") ||
     item.title.toLowerCase().includes("pricing")
   ).length;
 

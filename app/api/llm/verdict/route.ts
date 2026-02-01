@@ -142,79 +142,86 @@ CRITICAL RULES:
         const hnHits = evidence.hackernews?.hits || [];
         const hasCitations = googleItems.length > 0 || hnHits.length > 0;
 
-        if (hasCitations) {
-          // Build available citations for post-processing
-          const availableCitations: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" | "website" }> = [];
+        // OPTIMIZATION: Early return if all reasons already have citations
+        const allReasonsHaveCitations = validated.reasons.every(
+          r => r.evidenceCitations && r.evidenceCitations.length > 0
+        );
+        if (!hasCitations || allReasonsHaveCitations) {
+          return NextResponse.json(validated);
+        }
 
-          // Add Google citations
-          googleItems.slice(0, 10).forEach((item: any) => {
-            if (item.title && item.link) {
-              availableCitations.push({
-                title: item.title,
-                url: item.link,
-                snippet: (item.snippet || "").substring(0, 150),
-                source: "google",
-              });
-            }
-          });
+        // Only build citations if needed (at least one reason missing citations)
+        // Build available citations for post-processing
+        const availableCitations: Array<{ title: string; url: string; snippet: string; source: "google" | "hackernews" | "website" }> = [];
 
-          // Add HN citations
-          hnHits.slice(0, 5).forEach((hit: any) => {
-            if (hit.title && hit.url) {
-              availableCitations.push({
-                title: hit.title,
-                url: hit.url,
-                snippet: `${hit.num_comments || 0} comments, ${hit.points || 0} points`,
-                source: "hackernews",
-              });
-            }
-          });
-
-          // Add website evidence citations if available
-          if (startup?.websiteEvidence?.pages) {
-            startup.websiteEvidence.pages.slice(0, 3).forEach((page: any) => {
-              if (page.url) {
-                availableCitations.push({
-                  title: page.title || page.url,
-                  url: page.url,
-                  snippet: (page.snippet || "").substring(0, 150),
-                  source: "website",
-                });
-              }
+        // Add Google citations
+        googleItems.slice(0, 10).forEach((item: any) => {
+          if (item.title && item.link) {
+            availableCitations.push({
+              title: item.title,
+              url: item.link,
+              snippet: (item.snippet || "").substring(0, 150),
+              source: "google",
             });
           }
+        });
 
-          // If reasons don't have citations but evidence exists, add them
-          validated.reasons = validated.reasons.map((reason, idx) => {
-            // If reason already has citations, keep them
-            if (reason.evidenceCitations && reason.evidenceCitations.length > 0) {
-              return reason;
+        // Add HN citations
+        hnHits.slice(0, 5).forEach((hit: any) => {
+          if (hit.title && hit.url) {
+            availableCitations.push({
+              title: hit.title,
+              url: hit.url,
+              snippet: `${hit.num_comments || 0} comments, ${hit.points || 0} points`,
+              source: "hackernews",
+            });
+          }
+        });
+
+        // Add website evidence citations if available
+        if (startup?.websiteEvidence?.pages) {
+          startup.websiteEvidence.pages.slice(0, 3).forEach((page: any) => {
+            if (page.url) {
+              availableCitations.push({
+                title: page.title || page.url,
+                url: page.url,
+                snippet: (page.snippet || "").substring(0, 150),
+                source: "website",
+              });
             }
-
-            // Otherwise, add relevant citations (2-4 per reason)
-            // Select citations that might be relevant to this reason
-            const reasonText = `${reason.title} ${reason.detail}`.toLowerCase();
-            const relevantCitations = availableCitations
-              .filter(citation => {
-                // Simple relevance check: if reason mentions keywords from citation
-                const citationText = `${citation.title} ${citation.snippet}`.toLowerCase();
-                return reasonText.split(" ").some(word =>
-                  word.length > 4 && citationText.includes(word)
-                ) || idx < availableCitations.length; // Fallback: assign by index
-              })
-              .slice(0, 4);
-
-            // If no relevant citations found, just use first few available
-            const citationsToAdd = relevantCitations.length > 0
-              ? relevantCitations
-              : availableCitations.slice(idx * 2, idx * 2 + 4);
-
-            return {
-              ...reason,
-              evidenceCitations: citationsToAdd.slice(0, 4),
-            };
           });
         }
+
+        // If reasons don't have citations but evidence exists, add them
+        validated.reasons = validated.reasons.map((reason, idx) => {
+          // If reason already has citations, keep them
+          if (reason.evidenceCitations && reason.evidenceCitations.length > 0) {
+            return reason;
+          }
+
+          // Otherwise, add relevant citations (2-4 per reason)
+          // Select citations that might be relevant to this reason
+          const reasonText = `${reason.title} ${reason.detail}`.toLowerCase();
+          const relevantCitations = availableCitations
+            .filter(citation => {
+              // Simple relevance check: if reason mentions keywords from citation
+              const citationText = `${citation.title} ${citation.snippet}`.toLowerCase();
+              return reasonText.split(" ").some(word =>
+                word.length > 4 && citationText.includes(word)
+              ) || idx < availableCitations.length; // Fallback: assign by index
+            })
+            .slice(0, 4);
+
+          // If no relevant citations found, just use first few available
+          const citationsToAdd = relevantCitations.length > 0
+            ? relevantCitations
+            : availableCitations.slice(idx * 2, idx * 2 + 4);
+
+          return {
+            ...reason,
+            evidenceCitations: citationsToAdd.slice(0, 4),
+          };
+        });
       }
 
       return NextResponse.json(validated);

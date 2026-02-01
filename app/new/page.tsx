@@ -15,6 +15,7 @@ export default function NewPage() {
   const handleSubmit = async (data: FeatureFormData) => {
     setIsLoading(true);
     setError(null);
+    const submitStart = Date.now();
 
     try {
       // Ensure user is authenticated
@@ -23,7 +24,7 @@ export default function NewPage() {
         throw new Error("Failed to authenticate. Please try again.");
       }
 
-      // Create initial submission
+      // Create initial submission with "processing" status
       const submissionId = await createSubmission(
         {
           mode: data.mode,
@@ -35,77 +36,37 @@ export default function NewPage() {
         userId
       );
 
-      // Normalize the input
-      const normalizeRes = await fetch("/api/llm/normalize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feature: data.feature,
-          icp: data.icp,
-          goalMetric: data.goalMetric,
-          mode: data.mode,
-        }),
-      });
-
-      if (!normalizeRes.ok) {
-        const errorData = await normalizeRes.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to normalize input");
-      }
-
-      const normalized = await normalizeRes.json();
-
-      // Update submission with normalized data
-      await updateSubmission(submissionId, { normalized });
-
-      // Fetch evidence
-      const evidenceRes = await fetch("/api/evidence/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: data.feature.title,
-          keywords: normalized.keywordQuerySet,
-          startup: data.startup,
-          feature: data.feature,
-        }),
-      });
-
-      let evidence = null;
-      if (evidenceRes.ok) {
-        const evidenceData = await evidenceRes.json();
-        evidence = evidenceData.evidence; // Unwrap the evidence object
-        await updateSubmission(submissionId, { evidence });
-      }
-
-      // Get verdict
-      const verdictRes = await fetch("/api/llm/verdict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feature: data.feature,
-          icp: data.icp,
-          goalMetric: data.goalMetric,
-          mode: data.mode,
-          normalized,
-          evidence,
-          startup: data.startup,
-        }),
-      });
-
-      if (!verdictRes.ok) {
-        const errorData = await verdictRes.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to get verdict");
-      }
-
-      const verdict = await verdictRes.json();
-
-      // Update submission with verdict
+      // Update with initial stage and timing
       await updateSubmission(submissionId, {
-        verdict,
-        status: "verdict_ready"
+        status: "processing",
+        stage: "processing",
+        timings: { submitMs: Date.now() - submitStart },
       });
 
-      // Navigate to results
+      console.log(`[Submit] Created submission ${submissionId} in ${Date.now() - submitStart}ms`);
+
+      // Fire-and-forget: trigger background worker (don't await)
+      fetch("/api/validate/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId,
+          feature: data.feature,
+          icp: data.icp,
+          goalMetric: data.goalMetric,
+          mode: data.mode,
+          startup: data.startup,
+        }),
+        // Use keepalive to ensure request completes even after navigation
+        keepalive: true,
+      }).catch((err) => {
+        // Log but don't block - worker processes in background
+        console.error("[Submit] Worker trigger failed (non-blocking):", err);
+      });
+
+      // Redirect immediately - don't wait for processing
       router.push(`/s/${submissionId}`);
+
     } catch (err: any) {
       console.error("Submission error:", err);
       setError(err.message || "Something went wrong. Please try again.");

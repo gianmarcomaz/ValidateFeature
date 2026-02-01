@@ -30,7 +30,7 @@ const EvidenceSearchRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate request
     let validatedBody: EvidenceQueryInput;
     try {
@@ -83,41 +83,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch evidence from both sources (with error handling)
-    // Google: Execute searches using searchGoogleCse helper
-    let googleResults: GoogleCseQueryResult[] = [];
-    let googleConfigured = false;
-    let googleErrors: any[] = [];
-    
-    try {
-      const googleSearchResult = await searchGoogleCse(searchQueries);
-      googleResults = googleSearchResult.results || [];
-      googleConfigured = googleSearchResult.configured || false;
-      googleErrors = googleSearchResult.errors || [];
-    } catch (err: any) {
-      console.error("[Evidence] Google CSE fetch failed:", err?.message || err);
-      googleErrors.push({ error: { type: "api_error", message: err?.message || "Google CSE fetch failed" } });
-      // Continue with empty Google results
-    }
+    // Fetch evidence from both sources IN PARALLEL (with error handling)
+    console.log(`[Evidence] Fetching Google and HN in parallel...`);
 
-    // Hacker News: Fetch (NO API KEY REQUIRED - uses public Algolia API)
-    let hnResults: Awaited<ReturnType<typeof searchHackerNews>> = [];
-    try {
-      console.log(`[Evidence] Fetching Hacker News for keywords: ${keywords.slice(0, 3).join(", ")}`);
-      hnResults = await searchHackerNews(keywords);
-      console.log(`[Evidence] Hacker News: ${hnResults.length} hits found`);
-      if (hnResults.length > 0) {
-        console.log(`[Evidence] Sample HN hit: ${hnResults[0].title} (${hnResults[0].url || "no URL"})`);
-      }
-    } catch (err: any) {
-      console.error("[Evidence] Hacker News fetch failed:", err?.message || err);
-      // Continue with empty HN results
-    }
+    // Prepare the parallel fetch operations
+    const googleFetchPromise = searchGoogleCse(searchQueries)
+      .then(result => ({
+        success: true as const,
+        results: result.results || [],
+        configured: result.configured || false,
+        errors: result.errors || []
+      }))
+      .catch((err: any) => {
+        console.error("[Evidence] Google CSE fetch failed:", err?.message || err);
+        return {
+          success: false as const,
+          results: [] as GoogleCseQueryResult[],
+          configured: false,
+          errors: [{ error: { type: "api_error", message: err?.message || "Google CSE fetch failed" } }]
+        };
+      });
+
+    const hnFetchPromise = searchHackerNews(keywords)
+      .then(hits => {
+        console.log(`[Evidence] Hacker News: ${hits.length} hits found`);
+        if (hits.length > 0) {
+          console.log(`[Evidence] Sample HN hit: ${hits[0].title} (${hits[0].url || "no URL"})`);
+        }
+        return hits;
+      })
+      .catch((err: any) => {
+        console.error("[Evidence] Hacker News fetch failed:", err?.message || err);
+        return [] as Awaited<ReturnType<typeof searchHackerNews>>;
+      });
+
+    // Execute both fetches in parallel
+    const [googleData, hnResults] = await Promise.all([googleFetchPromise, hnFetchPromise]);
+
+    const googleResults = googleData.results;
+    const googleConfigured = googleData.configured;
+    const googleErrors = googleData.errors;
 
     // Extract competitors from Google results (safe even if empty)
     let competitors: any[] = [];
     let competitorSummary: any = { totalCompetitorsFound: 0, topCompetitors: [], saturationSignal: "low" as const };
-    
+
     try {
       competitors = extractCompetitorsFromGoogle(googleResults);
       competitorSummary = generateCompetitorSummary(competitors);
@@ -128,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     // Build warnings array
     const warnings: NormalizedEvidence["warnings"] = [];
-    
+
     if (!googleConfigured) {
       warnings.push({
         type: "missing_config",
@@ -136,7 +146,7 @@ export async function POST(request: NextRequest) {
         details: "Set SERPER_API_KEY in .env.local to enable external search results",
       });
     }
-    
+
     if (googleErrors.length > 0) {
       const errorTypes = new Set(googleErrors.map((e: any) => e?.error?.type || e?.type));
       if (errorTypes.has("rate_limit")) {
@@ -162,7 +172,7 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
+
     const googleItemCount = googleResults.reduce((sum, q) => sum + q.items.length, 0);
     if (googleConfigured && googleItemCount === 0) {
       warnings.push({
@@ -171,17 +181,17 @@ export async function POST(request: NextRequest) {
         details: "Try adjusting search queries or check if queries are too specific",
       });
     }
-    
+
     // Log evidence for debugging (structured, no secrets)
     console.log(`[Evidence] googleConfigured=${googleConfigured}, googleItems=${googleItemCount}, hnHits=${hnResults.length}, competitors=${competitors.length}, warnings=${warnings.length}`);
-    
+
     // Additional debug: Check if APIs are actually being called
     if (!googleConfigured) {
       console.log(`[Evidence] Serper.dev search not configured - check SERPER_API_KEY env var`);
     } else if (googleItemCount === 0) {
       console.log(`[Evidence] Serper.dev search configured but returned 0 items - check API quota or query relevance`);
     }
-    
+
     if (hnResults.length === 0) {
       console.log(`[Evidence] HN returned 0 hits for keywords: ${keywords.slice(0, 3).join(", ")}`);
     }
@@ -189,7 +199,7 @@ export async function POST(request: NextRequest) {
     // Normalize evidence (includes competitors now) - safe even if empty
     let normalized: any;
     let signals: any;
-    
+
     try {
       normalized = normalizeEvidence(googleResults, hnResults, competitors);
 
@@ -230,7 +240,7 @@ export async function POST(request: NextRequest) {
         details: "Some evidence data may be incomplete",
       });
     }
-    
+
     // Structured logging (counts only, no secrets)
     const evidenceCoverage = signals?.evidenceCoverage || 0;
     console.log(`[Evidence] Signals: competitorDensity=${Math.round(signals?.competitor_density || 0)}, evidenceCoverage=${Math.round(evidenceCoverage)}, marketEstablished=${signals?.marketEstablished || false}`);
@@ -246,10 +256,10 @@ export async function POST(request: NextRequest) {
         hits: normalized?.hackernews?.hits || hnResults || [],
       },
       competitors: competitors || [],
-      competitorSummary: competitorSummary || { 
-        totalCompetitorsFound: 0, 
-        topCompetitors: [], 
-        saturationSignal: "low" as const 
+      competitorSummary: competitorSummary || {
+        totalCompetitorsFound: 0,
+        topCompetitors: [],
+        saturationSignal: "low" as const
       },
       citations: normalized?.citations || [],
       signals: signals || {
