@@ -31,7 +31,7 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                     <Search className="text-slate-600" size={24} />
                 </div>
                 <p className="text-slate-400 font-medium">No competitors found</p>
-                <p className="text-xs text-slate-500 mt-1">We couldn't detect any direct competitors in this market segment.</p>
+                <p className="text-xs text-slate-500 mt-1">We couldn&apos;t detect any direct competitors in this market segment.</p>
             </div>
         );
     }
@@ -161,7 +161,7 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                                             <div className="space-y-2">
                                                 {competitor.evidenceSnippets.map((snippet, idx) => (
                                                     <div key={idx} className="p-3 bg-void-950/50 border border-white/5 rounded-lg text-slate-400 italic text-xs">
-                                                        "{snippet}"
+                                                        &quot;{snippet}&quot;
                                                     </div>
                                                 ))}
                                             </div>

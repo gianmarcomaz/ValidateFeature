@@ -104,7 +104,7 @@ export function SprintPlanView({ sprint }: SprintPlanViewProps) {
                   {template.platform}
                 </span>
                 {template.subject && (
-                  <span className="text-sm text-slate-400">"{template.subject}"</span>
+                  <span className="text-sm text-slate-400">&quot;{template.subject}&quot;</span>
                 )}
               </div>
               <div className="p-3 bg-navy-900 rounded-lg">

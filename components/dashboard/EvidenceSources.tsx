@@ -86,8 +86,8 @@ export function EvidenceSources({ citations, googleQueries, hackerNewsHits }: Ev
                     <button
                         onClick={() => setActiveTab("all")}
                         className={`px-4 py-2 rounded-lg text-sm transition-all ${activeTab === "all"
-                                ? "bg-accent/20 text-accent border border-accent/30"
-                                : "bg-navy-800 text-slate-400 border border-slate-700/50 hover:text-white"
+                            ? "bg-accent/20 text-accent border border-accent/30"
+                            : "bg-navy-800 text-slate-400 border border-slate-700/50 hover:text-white"
                             }`}
                     >
                         All ({citations.length})
@@ -95,8 +95,8 @@ export function EvidenceSources({ citations, googleQueries, hackerNewsHits }: Ev
                     <button
                         onClick={() => setActiveTab("google")}
                         className={`px-4 py-2 rounded-lg text-sm transition-all ${activeTab === "google"
-                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                : "bg-navy-800 text-slate-400 border border-slate-700/50 hover:text-white"
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "bg-navy-800 text-slate-400 border border-slate-700/50 hover:text-white"
                             }`}
                     >
                         Search ({googleCount})
@@ -104,8 +104,8 @@ export function EvidenceSources({ citations, googleQueries, hackerNewsHits }: Ev
                     <button
                         onClick={() => setActiveTab("hackernews")}
                         className={`px-4 py-2 rounded-lg text-sm transition-all ${activeTab === "hackernews"
-                                ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                                : "bg-navy-800 text-slate-400 border border-slate-700/50 hover:text-white"
+                            ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                            : "bg-navy-800 text-slate-400 border border-slate-700/50 hover:text-white"
                             }`}
                     >
                         HN ({hnCount})
@@ -140,7 +140,7 @@ export function EvidenceSources({ citations, googleQueries, hackerNewsHits }: Ev
                         <div className="flex flex-wrap gap-2">
                             {googleQueries.map((qr, idx) => (
                                 <span key={idx} className="px-2 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg">
-                                    "{qr.q}" → {qr.items.length} results
+                                    &quot;{qr.q}&quot; → {qr.items.length} results
                                 </span>
                             ))}
                         </div>
