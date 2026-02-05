@@ -7,6 +7,9 @@ import { computeSignals } from "@/lib/evidence/signals";
 import { buildSearchQueries } from "@/lib/evidence/queryBuilder";
 import { normalizeEvidence, generateCompetitorSummary } from "@/lib/evidence/normalize";
 import { NormalizedEvidence } from "@/lib/evidence/types";
+import { updateSubmissionAdmin } from "@/lib/firebase/admin-db";
+import { normalizeFeature } from "@/lib/llm/normalize";
+import { generateVerdict } from "@/lib/llm/verdict";
 
 // Timeout utility using Promise.race
 async function withTimeout<T>(
@@ -34,33 +37,12 @@ async function withTimeout<T>(
     }
 }
 
-// Update submission via internal API call
-async function updateSubmissionServer(
-    submissionId: string,
-    updates: Record<string, any>,
-    baseUrl: string
-): Promise<void> {
-    try {
-        const res = await fetch(`${baseUrl}/api/submission/update`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ submissionId, updates }),
-        });
-        if (!res.ok) {
-            console.error("[Worker] Failed to update submission:", await res.text());
-        }
-    } catch (err) {
-        console.error("[Worker] Update error:", err);
-    }
-}
-
 /**
  * Background worker endpoint for progressive validation processing
  * Called fire-and-forget from the submit handler
  */
 export async function POST(request: NextRequest) {
     const startTime = Date.now();
-    const baseUrl = request.nextUrl.origin;
 
     try {
         const body = await request.json();
@@ -75,27 +57,14 @@ export async function POST(request: NextRequest) {
 
         // ============ STAGE 1: NORMALIZE ============
         console.log(`[Worker] Stage 1: Normalizing...`);
-        await updateSubmissionServer(submissionId, { stage: "normalizing" }, baseUrl);
+        await updateSubmissionAdmin(submissionId, { stage: "normalizing" });
 
         const normalizeStart = Date.now();
         let normalized: any = null;
 
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-            const normalizeRes = await fetch(`${baseUrl}/api/llm/normalize`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ feature, icp, goalMetric, mode }),
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeoutId);
-
-            if (normalizeRes.ok) {
-                normalized = await normalizeRes.json();
-            }
+            // Direct call, no fetch
+            normalized = await normalizeFeature({ feature, icp, goalMetric, mode });
         } catch (err: any) {
             console.error("[Worker] Normalize failed:", err.message);
         }
@@ -105,12 +74,12 @@ export async function POST(request: NextRequest) {
 
         // Update with normalized data
         if (normalized) {
-            await updateSubmissionServer(submissionId, { normalized }, baseUrl);
+            await updateSubmissionAdmin(submissionId, { normalized });
         }
 
         // ============ STAGE 2: EVIDENCE (PARALLEL) ============
         console.log(`[Worker] Stage 2: Fetching evidence in parallel...`);
-        await updateSubmissionServer(submissionId, { stage: "evidence" }, baseUrl);
+        await updateSubmissionAdmin(submissionId, { stage: "evidence" });
 
         const evidenceStart = Date.now();
 
@@ -172,42 +141,27 @@ export async function POST(request: NextRequest) {
         evidence.signals = signals;
 
         // Update with evidence
-        await updateSubmissionServer(submissionId, { evidence }, baseUrl);
+        await updateSubmissionAdmin(submissionId, { evidence });
         console.log(`[Worker] Evidence saved to submission`);
 
         // ============ STAGE 3: VERDICT (LLM) ============
         console.log(`[Worker] Stage 3: Generating verdict...`);
-        await updateSubmissionServer(submissionId, { stage: "verdict" }, baseUrl);
+        await updateSubmissionAdmin(submissionId, { stage: "verdict" });
 
         const verdictStart = Date.now();
         let verdict: any = null;
 
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for LLM
-
-            const verdictRes = await fetch(`${baseUrl}/api/llm/verdict`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    feature,
-                    icp,
-                    goalMetric,
-                    mode,
-                    normalized,
-                    evidence,
-                    startup,
-                }),
-                signal: controller.signal,
+            // Direct call, no fetch
+            verdict = await generateVerdict({
+                feature,
+                icp,
+                goalMetric,
+                mode,
+                normalized,
+                evidence,
+                startup,
             });
-
-            clearTimeout(timeoutId);
-
-            if (verdictRes.ok) {
-                verdict = await verdictRes.json();
-            } else {
-                console.error("[Worker] Verdict API error:", verdictRes.status);
-            }
         } catch (err: any) {
             console.error("[Worker] Verdict failed:", err.message);
         }
@@ -231,7 +185,7 @@ export async function POST(request: NextRequest) {
             finalUpdate.processingError = "Verdict generation timed out or failed";
         }
 
-        await updateSubmissionServer(submissionId, finalUpdate, baseUrl);
+        await updateSubmissionAdmin(submissionId, finalUpdate);
 
         console.log(`[Worker] Processing complete for ${submissionId}`);
 
@@ -244,6 +198,10 @@ export async function POST(request: NextRequest) {
 
     } catch (err: any) {
         console.error("[Worker] Fatal error:", err);
+
+        // Try to log fatal error to DB if possible (and we have submissionId in body if we parsed it)
+        // But since we might be in catch block early, we can't guarantee submissionId.
+
         return NextResponse.json(
             { error: "Worker processing failed", message: err.message },
             { status: 500 }
