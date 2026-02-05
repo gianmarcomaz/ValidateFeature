@@ -10,7 +10,7 @@ export interface VerdictInput {
     feature: any;
     icp: any;
     goalMetric: string;
-    mode: string;
+    mode: "early" | "existing";
     normalized: any;
     evidence: any;
     startup?: any;

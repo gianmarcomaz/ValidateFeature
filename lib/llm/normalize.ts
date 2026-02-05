@@ -10,7 +10,7 @@ export interface NormalizeInput {
     feature: any;
     icp: any;
     goalMetric: string;
-    mode: string;
+    mode: "early" | "existing";
 }
 
 export async function normalizeFeature(input: NormalizeInput) {
