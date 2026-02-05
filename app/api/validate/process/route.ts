@@ -94,16 +94,16 @@ export async function POST(request: NextRequest) {
 
         // Parallel fetch with timeouts
         const [googleData, hnData] = await Promise.all([
-            // Google CSE with 2.5s timeout
+            // Google CSE with 6s timeout (Serper batches can take 3-5s)
             withTimeout(
                 searchGoogleCse(searchQueries),
-                2500,
+                6000,
                 { results: [] as GoogleCseQueryResult[], configured: false, errors: [] }
             ),
-            // HackerNews with 2s timeout
+            // HackerNews with 4s timeout
             withTimeout(
                 searchHackerNews(keywords),
-                2000,
+                4000,
                 []
             )
         ]);

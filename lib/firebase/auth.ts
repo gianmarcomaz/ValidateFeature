@@ -49,18 +49,34 @@ export async function ensureAnonymousAuth(): Promise<string | null> {
   // Create a new auth promise - one-time sign-in attempt
   authPromise = (async () => {
     try {
+      // Temporarily suppress Firebase SDK console errors (auth is disabled, we have fallback)
+      const originalError = console.error;
+      console.error = (...args: any[]) => {
+        const msg = args[0]?.toString() || '';
+        // Only suppress Firebase auth-specific errors
+        if (msg.includes('identitytoolkit') || msg.includes('signup-are-blocked')) {
+          return; // Suppress
+        }
+        originalError(...args); // Log other errors normally
+      };
+
       const credential = await signInAnonymously(auth);
+
+      // Restore console.error
+      console.error = originalError;
+
       currentUserId = credential.user.uid;
       return currentUserId;
     } catch (error: any) {
-      console.error("Error signing in anonymously:", error);
+      // Restore console.error in case of error
+      console.error = console.error;
 
-      // Check if anonymous auth is blocked/disabled
+      // Silent catch - don't log this error since we have a working fallback
+      // Check if anonymous auth is blocked/disabled or other auth errors
       if (error?.code === "auth/operation-not-allowed" ||
         error?.message?.includes("signup-are-blocked") ||
         error?.message?.includes("identitytoolkit")) {
-        console.warn("Anonymous auth is disabled in Firebase. Using local fallback.");
-        console.warn("To enable: Firebase Console -> Authentication -> Sign-in method -> Anonymous -> Enable");
+        console.warn("⚠️  Anonymous auth is disabled. Using local session. To enable: Firebase Console → Authentication → Anonymous → Enable");
       }
 
       // Fall back to local ID

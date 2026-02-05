@@ -100,7 +100,10 @@ async function searchSerper(q: string): Promise<GoogleSearchResult> {
       bodyPreview: preview,
     };
 
+    console.log(`[Search] Serper response status=${response.status} for query="${q.substring(0, 50)}"`);
+
     if (!response.ok) {
+      console.error(`[Search] Serper error: ${response.status} - ${preview}`);
       if (response.status === 429) {
         return {
           result: { q, items: [] },
@@ -127,6 +130,8 @@ async function searchSerper(q: string): Promise<GoogleSearchResult> {
       displayLink: item.link ?? "",
       pagemap: item.date ? { metatags: [{ "serper:date": item.date }] } : undefined,
     }));
+
+    console.log(`[Search] Serper returned ${items.length} items, organic count=${data.organic?.length ?? 0}`);
 
     return { result: { q, items } };
   } catch (error: any) {
@@ -332,6 +337,9 @@ export async function searchGoogleCse(queries: string[]): Promise<{
       await new Promise(resolve => setTimeout(resolve, INTER_BATCH_DELAY_MS));
     }
   }
+
+  const totalItems = results.flatMap(r => r.items).length;
+  console.log(`[Search] Batch complete: ${queries.length} queries executed, ${totalItems} total items, ${errors.length} errors`);
 
   return { results, configured, errors };
 }

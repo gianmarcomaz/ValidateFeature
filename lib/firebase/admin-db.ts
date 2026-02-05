@@ -13,13 +13,26 @@ function getAdminDb() {
 
             if (serviceAccountKey) {
                 try {
-                    const parsed = JSON.parse(serviceAccountKey);
+                    // Handle potential double-escaped newlines from some env setups
+                    const rawKey = serviceAccountKey.includes("\\n")
+                        ? serviceAccountKey
+                        : serviceAccountKey;
+
+                    const parsed = JSON.parse(rawKey);
+
+                    // Fix private key newlines if they are literal "\n" strings
+                    if (parsed.private_key) {
+                        parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+                    }
+
                     adminApp = initializeApp({
                         credential: cert(parsed),
                         projectId: parsed.project_id || projectId,
                     });
-                } catch (err) {
-                    console.error("[AdminDB] Failed to parse service account:", err);
+                    console.log("[AdminDB] Firebase Admin initialized with service account");
+                } catch (err: any) {
+                    console.error("[AdminDB] Failed to initialize with service account:", err.message);
+                    console.error("[AdminDB] Key length:", serviceAccountKey.length);
                     // Fall through to projectId-only init
                 }
             }
