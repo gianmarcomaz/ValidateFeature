@@ -20,9 +20,10 @@ function generateLocalUserId(): string {
 /**
  * Ensures user is authenticated anonymously and returns user ID.
  * Falls back to a local ID if Firebase anonymous auth is not enabled.
+ * One-time initializer - does not use subscription-based auth listeners.
  */
 export async function ensureAnonymousAuth(): Promise<string | null> {
-  // If we already have a user ID, return it
+  // If we already have a user ID, return it immediately
   if (currentUserId) {
     return currentUserId;
   }
@@ -34,56 +35,39 @@ export async function ensureAnonymousAuth(): Promise<string | null> {
     return currentUserId;
   }
 
+  // Check if Firebase already has a current user
+  if (auth.currentUser) {
+    currentUserId = auth.currentUser.uid;
+    return currentUserId;
+  }
+
   // If auth is already in progress, return the existing promise
   if (authPromise) {
     return authPromise;
   }
 
-  // Create a new auth promise
-  authPromise = new Promise<string | null>((resolve) => {
-    if (!auth) {
-      currentUserId = generateLocalUserId();
-      resolve(currentUserId);
-      return;
-    }
+  // Create a new auth promise - one-time sign-in attempt
+  authPromise = (async () => {
+    try {
+      const credential = await signInAnonymously(auth);
+      currentUserId = credential.user.uid;
+      return currentUserId;
+    } catch (error: any) {
+      console.error("Error signing in anonymously:", error);
 
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      if (user) {
-        currentUserId = user.uid;
-        unsubscribe();
-        resolve(user.uid);
-      } else {
-        // No user, try to sign in anonymously
-        try {
-          if (!auth) {
-            currentUserId = generateLocalUserId();
-            unsubscribe();
-            resolve(currentUserId);
-            return;
-          }
-          const credential = await signInAnonymously(auth);
-          currentUserId = credential.user.uid;
-          unsubscribe();
-          resolve(credential.user.uid);
-        } catch (error: any) {
-          console.error("Error signing in anonymously:", error);
-
-          // Check if anonymous auth is blocked/disabled
-          if (error?.code === "auth/operation-not-allowed" ||
-            error?.message?.includes("signup-are-blocked") ||
-            error?.message?.includes("identitytoolkit")) {
-            console.warn("Anonymous auth is disabled in Firebase. Using local fallback.");
-            console.warn("To enable: Firebase Console -> Authentication -> Sign-in method -> Anonymous -> Enable");
-          }
-
-          // Fall back to local ID
-          currentUserId = generateLocalUserId();
-          unsubscribe();
-          resolve(currentUserId);
-        }
+      // Check if anonymous auth is blocked/disabled
+      if (error?.code === "auth/operation-not-allowed" ||
+        error?.message?.includes("signup-are-blocked") ||
+        error?.message?.includes("identitytoolkit")) {
+        console.warn("Anonymous auth is disabled in Firebase. Using local fallback.");
+        console.warn("To enable: Firebase Console -> Authentication -> Sign-in method -> Anonymous -> Enable");
       }
-    });
-  });
+
+      // Fall back to local ID
+      currentUserId = generateLocalUserId();
+      return currentUserId;
+    }
+  })();
 
   return authPromise;
 }
