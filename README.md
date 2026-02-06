@@ -1,6 +1,6 @@
 # Validate
 
-AI-powered feature validation tool that helps founders validate feature ideas with instant verdicts (Build/Risky/Don't Build), transparent evidence, pivot suggestions, and actionable validation sprint plans.
+AI-powered feature validation engine that helps product teams validate feature ideas before building them. Get instant verdicts (Build/Risky/Don't Build) backed by real market signals, transparent evidence, and actionable validation sprint plans.
 
 ## 📋 Table of Contents
 
@@ -51,7 +51,8 @@ AI-powered feature validation tool that helps founders validate feature ideas wi
 
 ### Key Features
 
-- **Instant Verdicts**: AI-powered analysis with BUILD/RISKY/DON'T BUILD recommendations
+- **Instant Feature Verdicts**: AI-powered analysis with BUILD/RISKY/DON'T BUILD recommendations
+- **Market Signals**: Analyzes similar features, user pain signals, and market traction
 - **Transparent Evidence**: Shows methodology, assumptions, and limitations
 - **Pivot Suggestions**: Alternative approaches if verdict is risky/don't build
 - **Validation Sprint Plans**: Ready-to-run tests, surveys, and outreach templates

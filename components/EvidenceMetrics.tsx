@@ -36,14 +36,14 @@ export function EvidenceMetrics({ evidence }: EvidenceMetricsProps) {
   const signals = evidence.signals;
 
   const metrics = [
-    { label: "Competitor Density", value: signals.competitor_density },
-    { label: "Recency Score", value: signals.recency_score },
-    { label: "Pain Signal", value: signals.pain_signal },
-    { label: "Overall Score", value: signals.overall_evidence_score },
+    { label: "Similar Feature Density", value: signals.competitor_density },
+    { label: "Recent Traction Score", value: signals.recency_score },
+    { label: "User Pain Signal", value: signals.pain_signal },
+    { label: "Feature Viability Score", value: signals.overall_evidence_score },
   ];
 
   return (
-    <Section title="Evidence Metrics">
+    <Section title="Market Signal Strength">
       {/* Warnings */}
       {evidence.warnings && evidence.warnings.length > 0 && (
         <div className="mb-4 space-y-2">
@@ -86,7 +86,7 @@ export function EvidenceMetrics({ evidence }: EvidenceMetricsProps) {
       {evidence.competitorSummary && evidence.competitorSummary.totalCompetitorsFound > 0 && (
         <div className="mt-4 p-4 bg-navy-900 rounded-xl">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-slate-400">Competitors Found</span>
+            <span className="text-sm text-slate-400">Similar Features Found</span>
             <span className="text-lg font-semibold text-white">{evidence.competitorSummary.totalCompetitorsFound}</span>
           </div>
           <div className="flex flex-wrap gap-2">

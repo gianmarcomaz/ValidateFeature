@@ -83,7 +83,7 @@ export function TransparencyPanel({ transparency, evidence }: TransparencyPanelP
               <p className="text-lg font-semibold text-white">
                 {evidence.competitors?.length || 0}
               </p>
-              <p className="text-xs text-slate-500">Competitors</p>
+              <p className="text-xs text-slate-500">Similar Features</p>
             </div>
             <div>
               <p className="text-lg font-semibold text-white">

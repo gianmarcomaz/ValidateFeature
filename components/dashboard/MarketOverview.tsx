@@ -46,7 +46,7 @@ export function MarketOverview({ signals, competitorCount, competitorSummary }: 
             <div>
                 <h2 className="text-xl font-semibold text-white mb-1">Market Intelligence</h2>
                 <p className="text-sm text-slate-400">
-                    Analysis based on {competitorCount} competitors and real-time market signals
+                    Analysis based on {competitorCount} similar features and real-time market signals
                 </p>
             </div>
 
@@ -58,7 +58,7 @@ export function MarketOverview({ signals, competitorCount, competitorSummary }: 
                         <Users size={14} />
                     </div>
                     <p className="text-3xl font-bold text-white mt-2">{competitorCount}</p>
-                    <p className="text-xs text-slate-500 mt-1">Competitors Found</p>
+                    <p className="text-xs text-slate-500 mt-1">Similar Features Found</p>
                     <div className={`mt-3 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${saturation.bgColor} ${saturation.color}`}>
                         {saturation.label} Saturation
                     </div>
@@ -127,8 +127,8 @@ export function MarketOverview({ signals, competitorCount, competitorSummary }: 
                         </p>
                         <p className="text-sm text-slate-400">
                             {signals.marketEstablished
-                                ? `Competition is present with ${competitorCount} known players. Differentiation will be key.`
-                                : "Limited competition detected. Opportunity for market entry."}
+                                ? `Similar features exist with ${competitorCount} known offerings. Differentiation will be key.`
+                                : "Limited similar features detected. Opportunity for market entry."}
                         </p>
                     </div>
                 </div>

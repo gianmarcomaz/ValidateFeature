@@ -1,44 +1,47 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { Zap } from "lucide-react";
+import { HowItWorksDrawer } from "@/components/HowItWorksDrawer";
 
 export function Navbar() {
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
     return (
-        <motion.nav
-            className="fixed top-0 left-0 right-0 z-50 bg-navy-900/80 backdrop-blur-md border-b border-slate-800/50"
-            initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-        >
-            <div className="mx-auto max-w-6xl px-6">
-                <div className="flex items-center justify-between h-16">
+        <>
+            <nav className="fixed top-0 left-0 right-0 z-40 bg-void-950/80 backdrop-blur-lg border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)] group-hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] transition-all duration-300">
+                            <Zap className="text-white" size={18} fill="currentColor" />
                         </div>
-                        <span className="font-semibold text-white text-lg">Validate</span>
+                        <span className="font-bold text-xl tracking-tight text-white group-hover:text-accent transition-colors">
+                            VALIDATE
+                        </span>
                     </Link>
 
                     {/* Navigation Links */}
-                    <div className="hidden md:flex items-center gap-8">
-                        <Link href="#how-it-works" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    <div className="flex items-center gap-6">
+                        <button
+                            onClick={() => setIsDrawerOpen(true)}
+                            className="text-sm text-slate-400 hover:text-white transition-colors"
+                        >
                             How It Works
-                        </Link>
-                        <Link href="/new" className="text-sm text-slate-400 hover:text-white transition-colors">
+                        </button>
+                        <Link
+                            href="/new"
+                            className="px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-[0_0_20px_rgba(139,92,246,0.4)]"
+                        >
                             New Validation
                         </Link>
                     </div>
-
-                    {/* CTA Button */}
-                    <Link href="/new" className="btn-primary text-sm py-2 px-5">
-                        Get Started
-                    </Link>
                 </div>
-            </div>
-        </motion.nav>
+            </nav>
+
+            {/* How It Works Drawer */}
+            <HowItWorksDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+        </>
     );
 }

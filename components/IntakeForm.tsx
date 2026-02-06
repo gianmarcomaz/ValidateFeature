@@ -19,7 +19,7 @@ interface IntakeFormProps {
 }
 
 export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
-  const [mode, setMode] = useState<Mode>("early");
+  const [mode, setMode] = useState<Mode>("existing");
   const [startupSource, setStartupSource] = useState<"website" | "manual">("manual");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isLoadingWebsite, setIsLoadingWebsite] = useState(false);
@@ -116,132 +116,97 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Mode Selection */}
-      <div>
-        <label className={labelClass}>What stage are you at?</label>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => setMode("early")}
-            className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${mode === "early"
-                ? "bg-accent text-white"
-                : "bg-navy-900 border border-slate-700 text-slate-400 hover:border-slate-500"
-              }`}
-          >
-            Early Stage
-            <span className="block text-xs opacity-70 mt-0.5">New idea, no product yet</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("existing")}
-            className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${mode === "existing"
-                ? "bg-accent text-white"
-                : "bg-navy-900 border border-slate-700 text-slate-400 hover:border-slate-500"
-              }`}
-          >
-            Existing Product
-            <span className="block text-xs opacity-70 mt-0.5">Adding to live product</span>
-          </button>
-        </div>
-      </div>
+      {/* About Your Startup - Always visible */}
+      <div className="space-y-6 p-6 bg-navy-900/50 rounded-xl border border-slate-700/50">
+        <div>
+          <h3 className="text-white font-medium mb-2">About Your Product</h3>
+          <p className="text-sm text-slate-400 mb-4">Tell us about your existing product (optional). You can enter details manually or provide your website URL to auto-fill.</p>
 
-      {/* Startup Context (for existing mode) */}
-      {mode === "existing" && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="space-y-6 p-6 bg-navy-900/50 rounded-xl border border-slate-700/50"
-        >
-          <div>
-            <h3 className="text-white font-medium mb-4">About Your Startup</h3>
+          {/* Source Toggle */}
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setStartupSource("website")}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${startupSource === "website"
+                ? "bg-accent text-white"
+                : "bg-transparent text-slate-400 border border-slate-700"
+                }`}
+            >
+              From Website
+            </button>
+            <button
+              type="button"
+              onClick={() => setStartupSource("manual")}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${startupSource === "manual"
+                ? "bg-accent text-white"
+                : "bg-transparent text-slate-400 border border-slate-700"
+                }`}
+            >
+              Enter Manually
+            </button>
+          </div>
 
-            {/* Source Toggle */}
-            <div className="flex gap-2 mb-4">
+          {startupSource === "website" && (
+            <div className="flex gap-3 mb-4">
+              <input
+                type="url"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                placeholder="https://yourcompany.com"
+                className={inputClass}
+              />
               <button
                 type="button"
-                onClick={() => setStartupSource("website")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${startupSource === "website"
-                    ? "bg-accent text-white"
-                    : "bg-transparent text-slate-400 border border-slate-700"
-                  }`}
+                onClick={handleWebsiteFetch}
+                disabled={isLoadingWebsite || !websiteUrl}
+                className="btn-primary px-5 whitespace-nowrap disabled:opacity-50"
               >
-                From Website
-              </button>
-              <button
-                type="button"
-                onClick={() => setStartupSource("manual")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${startupSource === "manual"
-                    ? "bg-accent text-white"
-                    : "bg-transparent text-slate-400 border border-slate-700"
-                  }`}
-              >
-                Enter Manually
+                {isLoadingWebsite ? <Spinner size="sm" /> : "Fetch"}
               </button>
             </div>
+          )}
 
-            {startupSource === "website" && (
-              <div className="flex gap-3 mb-4">
-                <input
-                  type="url"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  placeholder="https://yourcompany.com"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={handleWebsiteFetch}
-                  disabled={isLoadingWebsite || !websiteUrl}
-                  className="btn-primary px-5 whitespace-nowrap disabled:opacity-50"
-                >
-                  {isLoadingWebsite ? <Spinner size="sm" /> : "Fetch"}
-                </button>
-              </div>
-            )}
+          {websiteError && (
+            <p className="text-red-400 text-sm mb-4">{websiteError}</p>
+          )}
 
-            {websiteError && (
-              <p className="text-red-400 text-sm mb-4">{websiteError}</p>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className={labelClass}>Startup Name</label>
-                <input
-                  type="text"
-                  value={startupName}
-                  onChange={(e) => setStartupName(e.target.value)}
-                  placeholder="e.g., Acme Inc"
-                  className={inputClass}
-                  required={mode === "existing"}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>What does it do?</label>
-                <textarea
-                  value={startupWhatItDoes}
-                  onChange={(e) => setStartupWhatItDoes(e.target.value)}
-                  placeholder="Describe your core product or service"
-                  rows={2}
-                  className={inputClass}
-                  required={mode === "existing"}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Target Audience</label>
-                <input
-                  type="text"
-                  value={startupTargetAudience}
-                  onChange={(e) => setStartupTargetAudience(e.target.value)}
-                  placeholder="e.g., Small business owners"
-                  className={inputClass}
-                  required={mode === "existing"}
-                />
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Startup Name</label>
+              <input
+                type="text"
+                value={startupName}
+                onChange={(e) => setStartupName(e.target.value)}
+                placeholder="e.g., Acme Inc"
+                className={inputClass}
+                required={mode === "existing"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>What does it do?</label>
+              <textarea
+                value={startupWhatItDoes}
+                onChange={(e) => setStartupWhatItDoes(e.target.value)}
+                placeholder="Describe your core product or service"
+                rows={2}
+                className={inputClass}
+                required={mode === "existing"}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Target Audience</label>
+              <input
+                type="text"
+                value={startupTargetAudience}
+                onChange={(e) => setStartupTargetAudience(e.target.value)}
+                placeholder="e.g., Small business owners"
+                className={inputClass}
+                required={mode === "existing"}
+              />
             </div>
           </div>
-        </motion.div>
-      )}
+        </div>
+      </div>
 
       {/* Feature Context */}
       <div className="space-y-4">
@@ -359,10 +324,10 @@ export function IntakeForm({ onSubmit, isLoading = false }: IntakeFormProps) {
         {isLoading ? (
           <span className="flex items-center justify-center gap-3">
             <Spinner size="sm" />
-            Analyzing...
+            Analyzing feature signals...
           </span>
         ) : (
-          "Get Validation Verdict"
+          "Validate This Feature"
         )}
       </button>
     </form>

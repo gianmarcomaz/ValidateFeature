@@ -6,10 +6,15 @@ import { Globe, ExternalLink, ChevronDown, ChevronUp, AlertCircle, Search } from
 
 interface Competitor {
     name: string;
+    // Normalized fields (primary)
+    website?: string;
+    description?: string;
+    overlapSummary?: string;
+    // Legacy fields (for backward compatibility)
     domain?: string;
     url?: string;
     link?: string;
-    category: string;
+    category?: string;
     whatTheyDo?: string;
     whyOverlaps?: string;
     overlapReason?: string;
@@ -30,8 +35,8 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-void-800 flex items-center justify-center border border-white/5">
                     <Search className="text-slate-600" size={24} />
                 </div>
-                <p className="text-slate-400 font-medium">No competitors found</p>
-                <p className="text-xs text-slate-500 mt-1">We couldn&apos;t detect any direct competitors in this market segment.</p>
+                <p className="text-slate-400 font-medium">No similar features found</p>
+                <p className="text-xs text-slate-500 mt-1">We couldn't detect comparable features in this space.</p>
             </div>
         );
     }
@@ -58,9 +63,9 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-white mb-1">Competitor Analysis</h2>
+                    <h2 className="text-xl font-semibold text-white mb-1">Feature Landscape Analysis</h2>
                     <p className="text-sm text-slate-400">
-                        {competitors.length} competitors identified in your market
+                        {competitors.length} comparable features found in the market
                     </p>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-500 bg-void-900/50 px-3 py-1.5 rounded-full border border-white/5">
@@ -81,9 +86,10 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                 {competitors.map((competitor, index) => {
                     const isExpanded = expandedId === index;
                     const confidenceInfo = getConfidenceInfo(competitor.confidence);
-                    const competitorUrl = competitor.url || competitor.link || `https://${competitor.domain}`;
-                    const description = competitor.whatTheyDo || competitor.overlapReason;
-                    const overlap = competitor.whyOverlaps || competitor.overlapReason;
+                    // Use normalized fields with fallback to legacy fields
+                    const competitorUrl = competitor.website || competitor.url || competitor.link || (competitor.domain ? `https://${competitor.domain}` : 'https://example.com');
+                    const description = competitor.description || competitor.whatTheyDo || competitor.overlapReason || "Competitor in your market space.";
+                    const overlap = competitor.overlapSummary || competitor.whyOverlaps || competitor.overlapReason;
 
                     return (
                         <Card
@@ -112,15 +118,17 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                             </div>
 
                             {/* Category Badge */}
-                            <div className="mb-4">
-                                <span className={`text-[10px] font-medium px-2.5 py-1 rounded-md border inline-block ${getCategoryColor(competitor.category)}`}>
-                                    {competitor.category}
-                                </span>
-                            </div>
+                            {competitor.category && (
+                                <div className="mb-4">
+                                    <span className={`text-[10px] font-medium px-2.5 py-1 rounded-md border inline-block ${getCategoryColor(competitor.category)}`}>
+                                        {competitor.category}
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Description */}
                             <p className="text-sm text-slate-400 mb-6 line-clamp-3 leading-relaxed flex-grow">
-                                {description || "Competitor in your market space."}
+                                {description}
                             </p>
 
                             {/* Actions */}
@@ -131,7 +139,7 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                                     rel="noopener noreferrer"
                                     className="text-xs text-slate-400 hover:text-cyan transition-colors flex items-center gap-1.5 font-medium group"
                                 >
-                                    Visit Site
+                                    Visit Website
                                     <ExternalLink size={12} className="group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
                                 </a>
                                 <button
@@ -146,14 +154,19 @@ export function CompetitorGrid({ competitors }: CompetitorGridProps) {
                             {/* Expanded Details */}
                             {isExpanded && (
                                 <div className="mt-4 pt-4 border-t border-white/5 space-y-4 animate-fade-in text-sm">
-                                    {overlap && (
-                                        <div>
-                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1.5 font-semibold">Market Overlap</p>
+                                    {/* Competitive Overlap Section */}
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1.5 font-semibold">Feature Overlap</p>
+                                        {overlap ? (
                                             <p className="text-slate-300 leading-relaxed bg-void-950/50 p-3 rounded-lg border border-white/5">
                                                 {overlap}
                                             </p>
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <p className="text-slate-400 italic text-xs bg-void-950/30 p-3 rounded-lg border border-white/5">
+                                                Overlap data not available yet.
+                                            </p>
+                                        )}
+                                    </div>
 
                                     {competitor.evidenceSnippets && competitor.evidenceSnippets.length > 0 && (
                                         <div>

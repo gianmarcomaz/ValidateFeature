@@ -29,10 +29,10 @@ export default function Home() {
           className="max-w-5xl mx-auto"
         >
           <h1 className="text-6xl md:text-8xl font-bold tracking-tight mb-8 text-white drop-shadow-2xl">
-            Clarity. Focus. <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-purple-400 to-cyan animate-text">Impact.</span>
+            Validate Features. <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-purple-400 to-cyan animate-text">Build With Confidence.</span>
           </h1>
           <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
-            We turn potential ideas into <span className="text-white font-medium">validated products</span> through AI-driven market intelligence.
+            Make product decisions backed by <span className="text-white font-medium">real market signals</span>. Know what to build next before writing a single line of code.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -40,7 +40,7 @@ export default function Home() {
               href="/new"
               className="group relative px-8 py-4 bg-white text-black rounded-full font-bold text-lg hover:scale-105 transition-all duration-300 shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:shadow-[0_0_60px_rgba(255,255,255,0.5)]"
             >
-              Start Validating
+              Validate a Feature
               <ArrowRight className="inline-block ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link

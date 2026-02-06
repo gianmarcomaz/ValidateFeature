@@ -20,9 +20,9 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ activeTab, setActiveTab, title }: DashboardSidebarProps) {
     const menuItems = [
         { id: "verdict", label: "Verdict", icon: Zap },
-        { id: "market", label: "Market Overview", icon: LayoutDashboard },
-        { id: "competitors", label: "Competitors", icon: Users },
-        { id: "evidence", label: "Evidence", icon: FileText },
+        { id: "market", label: "Market Signals", icon: LayoutDashboard },
+        { id: "competitors", label: "Feature Landscape", icon: Users },
+        { id: "evidence", label: "Evidence Sources", icon: FileText },
     ];
 
     return (
@@ -61,8 +61,8 @@ export function DashboardSidebar({ activeTab, setActiveTab, title }: DashboardSi
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive
-                                    ? "text-white bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"
-                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                ? "text-white bg-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"
+                                : "text-slate-400 hover:text-white hover:bg-white/5"
                                 }`}
                         >
                             {isActive && (

@@ -92,10 +92,10 @@ export function ProgressStepper({ stage, className = "" }: ProgressStepperProps)
                         <span
                             key={stageItem.id}
                             className={`text-xs font-medium transition-colors ${isCurrent
-                                    ? "text-teal"
-                                    : isPast
-                                        ? "text-slate-400"
-                                        : "text-slate-600"
+                                ? "text-teal"
+                                : isPast
+                                    ? "text-slate-400"
+                                    : "text-slate-600"
                                 }`}
                             style={{ width: "20%", textAlign: "center" }}
                         >
@@ -122,10 +122,10 @@ export function ProgressStepper({ stage, className = "" }: ProgressStepperProps)
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                 >
-                    {stage === "processing" && "Initializing validation..."}
-                    {stage === "normalizing" && "Analyzing your feature..."}
-                    {stage === "evidence" && "Searching for market evidence..."}
-                    {stage === "verdict" && "Generating AI verdict..."}
+                    {stage === "processing" && "Initializing feature validation..."}
+                    {stage === "normalizing" && "Analyzing feature concept..."}
+                    {stage === "evidence" && "Gathering market signals..."}
+                    {stage === "verdict" && "Evaluating feature viability..."}
                 </motion.p>
             )}
         </div>
